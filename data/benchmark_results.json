@@ -1,0 +1,217 @@
+[
+  {
+    "id": 1,
+    "question": "The boiler pressure is 0.7 bar when cold. Is that too low, and what should I check first?",
+    "answer": "0.7\u202fbar\u202fcold is below the normal range (the demo example cites roughly\u202f1.0\u20111.5\u202fbar cold as normal), so it is likely too low.\n\n**First check:** Verify that the gauge you are reading is the system\u2011water pressure gauge (not the domestic\u2011mains pressure gauge) before proceeding with any other diagnostics.\u202f\u3010Source: 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1\u3011\u3010Source: 02_Low_Water_Pressure_Troubleshooting.pdf, Page 1\u3011\n\n**Sources:**\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1\n* 02_Low_Water_Pressure_Troubleshooting.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf",
+      "02_Low_Water_Pressure_Troubleshooting.pdf"
+    ]
+  },
+  {
+    "id": 2,
+    "question": "Pressure is 1.2 bar cold but rises to 2.8 bar when the heating is on. What could cause that?",
+    "answer": "The large pressure increase indicates a problem with the system\u2019s expansion\u2011control components.\u202fCheck the expansion\u2011vessel circuit (charge, connection and size), the filling valve and any relief\u2011valve discharge, as these are the usual causes of an unusually high hot\u2011pressure swing.\n\n**Sources:**\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1\n* 02_Low_Water_Pressure_Troubleshooting.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf",
+      "02_Low_Water_Pressure_Troubleshooting.pdf"
+    ]
+  },
+  {
+    "id": 3,
+    "question": "I topped the system up yesterday and today the pressure has dropped again. What should I investigate?",
+    "answer": "Treat this as recurring water loss until you can prove otherwise.\u202fInvestigate:\n\n- Any visible leaks in the system  \n- Radiator valve condition (possible leakage)  \n- The relief\u2011valve discharge point for water loss  \n- Automatic vents that might be letting water out  \n- The cold\u2011pressure vs. hot\u2011pressure pattern to see if the rise/fall is abnormal\n\n**Source:** 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 4,
+    "question": "The pressure-relief discharge pipe is dripping outside. What are the likely causes?",
+    "answer": "**Likely causes**\n\n- The relief valve is opening because the system pressure is too high (e.g., expansion\u2011vessel charge lost or undersized, filling\u2011valve passing, or the system is over\u2011filled).  \n- A small leak elsewhere in the circuit can cause pressure loss that makes the pressure\u2011relief valve discharge.  \n- The pressure\u2011relief valve (PRV) itself may be faulty or passing water.  \n- Automatic air\u2011vent loss can also lead to the valve opening and water dripping from the discharge pipe.  \n\n**Why** \u2013 The field guide lists \u201crelief\u2011valve discharge\u201d as a possible cause when pressure is low or repeatedly drops, and notes that high hot\u2011pressure or an expansion\u2011vessel problem can make the relief valve open. It also mentions leaks, PRV passing, and automatic\u2011vent loss as reasons for a dripping discharge pipe.  \n\n**Sources**  \n- 01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1  \n- 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1\n\n**Sources:**\n* 01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "01_Hydronic_Water_Pressure_Field_Guide.pdf",
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 5,
+    "question": "Upstairs radiators are cold but downstairs is heating normally. What should I check?",
+    "answer": "Check the following:\n\n* System pressure/static head \u2013 make sure the pressure is within the normal range.  \n* Air in the system \u2013 trapped air can prevent flow to the upper floor.  \n* Valve positions \u2013 verify that the upstairs valves are fully open and not throttled.  \n* Circulation \u2013 ensure the pump is delivering enough flow to reach the upstairs loop.  \n* Balancing \u2013 adjust balancing valves so the upstairs radiators receive adequate flow.  \n* Scope of the problem \u2013 determine whether it\u2019s limited to a single emitter, a single zone, or the entire upper floor.\n\n**Source:** 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 6,
+    "question": "One radiator is cold at the top but hot at the bottom. What does that indicate?",
+    "answer": "I couldn't find this information in the provided documents.",
+    "expected_status": "Not Found",
+    "actual_status": "Not Found",
+    "status_flag": "PASS",
+    "sources": []
+  },
+  {
+    "id": 7,
+    "question": "The radiator is hot at the top but much colder at the bottom. What could be wrong?",
+    "answer": "I couldn't find this information in the provided documents.",
+    "expected_status": "Not Found",
+    "actual_status": "Not Found",
+    "status_flag": "PASS",
+    "sources": []
+  },
+  {
+    "id": 8,
+    "question": "My flow temperature is 70\u00b0C and return is 45\u00b0C. Is that difference significant?",
+    "answer": "Yes \u2013 a 70\u202f\u00b0C flow and 45\u202f\u00b0C return give a 25\u202f\u00b0C temperature difference, which is a notable \u0394\u2011T and is used as a diagnostic indicator.  \n\nThe documents note that a 25\u202f\u00b0C \u0394\u2011T should be recognised and combined with the symptom of remote radiators being cold, prompting checks of circulation, air, valve positions, strainers/filters, pump operation and system balancing.\n\n**Source:** 03_Flow_Temperature_DeltaT_and_Circulation.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "03_Flow_Temperature_DeltaT_and_Circulation.pdf"
+    ]
+  },
+  {
+    "id": 9,
+    "question": "The boiler is running but the house is taking much longer than normal to heat. What should I check?",
+    "answer": "**Check the following items:**\n\n- Verify the heating demand and whether the boiler is delivering enough heat.  \n- Measure flow and return water temperatures to see if the temperature difference is adequate.  \n- Inspect circulation: pump operation, valve positions, and any restrictions in the pipework.  \n- Examine the condition of the radiators (emitters) for blockages or sludge.  \n- Ensure that controls (thermostats, zone valves, etc.) aren\u2019t limiting the system\u2019s operation.\n\nThese steps address the common causes of a boiler that fires but the house warms slowly.\n\n**Source:** 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 10,
+    "question": "The pump sounds like it is running, but I'm getting poor circulation. What should I look at?",
+    "answer": "Check the following items that affect circulation even when the pump is running:\n\n1. **Air in the system** \u2013 trapped air can block flow to remote emitters.  \n2. **Valve positions** \u2013 make sure all zone and radiator valves (including TRVs) are fully open.  \n3. **Strainers/filters** \u2013 a dirty filter or clogged strainer can restrict flow.  \n4. **Pump operation and head** \u2013 verify the pump is set for the correct differential pressure and isn\u2019t throttled.  \n5. **Balancing** \u2013 ensure the system is properly balanced so water reaches all radiators.  \n6. **Hydraulic restrictions or sludge** \u2013 look for any blockage in the pipework that could limit flow.\n\nThese checks are recommended for symptoms of poor circulation while the pump is audible.\n\n**Sources:**\n* 03_Flow_Temperature_DeltaT_and_Circulation.pdf, Page 1\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "03_Flow_Temperature_DeltaT_and_Circulation.pdf",
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 11,
+    "question": "I'm hearing rushing-water noises through the radiators. What could be causing that?",
+    "answer": "Rushing\u2011water noises in the radiators are usually caused by one of the following:\n\n- **Excess pump head** \u2013 the pump is delivering too much pressure.  \n- **Throttled or partially closed valves** \u2013 restricting flow creates turbulence.  \n- **Air trapped in the system** \u2013 bubbles can make a rushing sound as water moves past them.  \n- **Poor system balancing** \u2013 uneven flow rates between radiators can produce noise.\n\nThese are the causes listed for the \u201cNoise / rushing water\u201d symptom in the diagnostic matrix.\n\n**Source:** 03_Flow_Temperature_DeltaT_and_Circulation.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "03_Flow_Temperature_DeltaT_and_Circulation.pdf"
+    ]
+  },
+  {
+    "id": 12,
+    "question": "What does fault code F32 mean, and what checks should I perform before resetting anything?",
+    "answer": "**Fault code F32 means \u201cInsufficient circulation detected.\u201d**  \n\nBefore resetting, perform the following checks:  \n1. Verify the pump is operating correctly.  \n2. Check that any isolation valves are fully open.  \n3. Look for air trapped in the system.  \n4. Inspect the filter/strainer for blockage.  \n5. Confirm the system pressure is within the correct range.\n\n**Source:** 04_Heating_System_Fault_Codes_Demo.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "04_Heating_System_Fault_Codes_Demo.pdf"
+    ]
+  },
+  {
+    "id": 13,
+    "question": "The boiler keeps reaching temperature and switching off quickly. What could cause short cycling?",
+    "answer": "I couldn't find this information in the provided documents.",
+    "expected_status": "Not Found",
+    "actual_status": "Not Found",
+    "status_flag": "PASS",
+    "sources": []
+  },
+  {
+    "id": 14,
+    "question": "The customer says they have to bleed the same radiator every few weeks. What could be causing that?",
+    "answer": "I couldn't find this information in the provided documents.",
+    "expected_status": "Not Found",
+    "actual_status": "Not Found",
+    "status_flag": "PASS",
+    "sources": []
+  },
+  {
+    "id": 15,
+    "question": "System pressure looks normal, but there's no heat going to one zone. Where should I start?",
+    "answer": "Start by checking the zone\u2019s valve and flow set\u2011up:\n\n1. Verify the zone valve (or manual valve) is fully open and not stuck.  \n2. Look for trapped air in the radiators of that zone.  \n3. Confirm the circulation path isn\u2019t blocked and that the system is properly balanced \u2013 see if the problem is limited to a single emitter, a whole zone, or an entire floor.  \n4. Re\u2011check the system pressure/static head while you do the above, just to be sure it stays within the normal range.\n\nThese steps address the most common causes when pressure is OK but a zone receives no heat.\n\n**Source:** 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Partially Supported",
+    "actual_status": "Supported",
+    "status_flag": "REVIEW",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 16,
+    "question": "After replacing a radiator, the system pressure keeps changing. What checks should I perform?",
+    "answer": "I couldn't find this information in the provided documents.",
+    "expected_status": "Not Found",
+    "actual_status": "Not Found",
+    "status_flag": "PASS",
+    "sources": []
+  },
+  {
+    "id": 17,
+    "question": "What information should I collect before calling Firebird technical support?",
+    "answer": "**Collect the following information before contacting Firebird technical support:**\n\n- Appliance model and serial number  \n- Cold\u2011pressure and hot\u2011pressure readings  \n- Flow and return water temperatures  \n- Any fault code displayed  \n- Photographs of the pressure gauge or discharge (only if it can be done safely)  \n- Details of any recent work or maintenance performed  \n- A summary of the checks you have already carried out  \n\nThese items give support the key data needed to diagnose the issue efficiently.\n\n**Source:** 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf"
+    ]
+  },
+  {
+    "id": 18,
+    "question": "What happened on the last service visit at this customer's house?",
+    "answer": "On the last service visit the technician measured the system pressure, performed the service, and then instructed the customer to monitor the cold\u2011water pressure. They were told that if the pressure drops again they should look for hidden water loss in the system and re\u2011check the relief discharge.\n\n**Source:** 06_Commissioning_and_Service_Record_Demo.pdf, Page 1",
+    "expected_status": "Supported",
+    "actual_status": "Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "06_Commissioning_and_Service_Record_Demo.pdf"
+    ]
+  },
+  {
+    "id": 19,
+    "question": "Compare today's pressure readings with the readings from the previous service and tell me if anything looks abnormal.",
+    "answer": "I can compare this with the previous service, but today\u2019s pressure readings are not available in the provided documents.\n\n**Previous service readings (08\u202fSep\u202f2026):**  \n- **Cold pressure before service:**\u202f0.7\u202fbar  \n- **Hot pressure before service:**\u202f2.7\u202fbar  \n- **Cold pressure after service:**\u202f1.2\u202fbar  \n- **Hot pressure after service:**\u202f1.8\u202fbar  \n\nWithout current measurements, I cannot determine whether anything looks abnormal today.\n\n**Source:** 06_Commissioning_and_Service_Record_Demo.pdf, Page 1",
+    "expected_status": "Partially Supported",
+    "actual_status": "Partially Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "06_Commissioning_and_Service_Record_Demo.pdf"
+    ]
+  },
+  {
+    "id": 20,
+    "question": "Based on the pressure, flow temperature, return temperature and previous service history, what are the three most likely causes of this problem?",
+    "answer": "The documents do not contain current pressure, flow\u2011temperature or return\u2011temperature readings, so a specific diagnosis for the present situation can only be inferred from the previous service record and the general fault guidance.\n\n**Partially supported answer**\n\nBased on the service history (cold pressure rose from\u202f0.7\u202fbar to\u202f1.2\u202fbar, hot pressure fell from\u202f2.7\u202fbar to\u202f1.8\u202fbar, flow temperature dropped slightly, and the observed \u0394T decreased) and the fault guidance, the three most likely causes are:\n\n1. **Expansion\u2011vessel fault** \u2013 a change in pressure between cold and hot conditions often points to a problem with the expansion vessel charge or sizing.  \n2. **Circulation restriction** \u2013 the reduced \u0394T and lower flow temperature suggest possible hydraulic restriction, dirty filter, or throttled valves.  \n3. **Recurring water loss** \u2013 the drop in hot\u2011pressure after service and the need to top\u2011up water indicate possible water loss through a leak or vent.\n\n**What is not supported:** The documents do not provide the actual current readings for this problem, so the ranking is based on historical trends and general guidance only.\n\n**Sources:**\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1\n* 06_Commissioning_and_Service_Record_Demo.pdf, Page 1",
+    "expected_status": "Partially Supported",
+    "actual_status": "Partially Supported",
+    "status_flag": "PASS",
+    "sources": [
+      "05_Field_Plumber_FAQ_Knowledge_Base.pdf",
+      "06_Commissioning_and_Service_Record_Demo.pdf"
+    ]
+  }
+]

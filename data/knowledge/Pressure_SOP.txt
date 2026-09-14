@@ -1,0 +1,15 @@
+Standard Operating Procedure: Pressure & Thermal Management Systems
+Document: Pressure SOP
+Revision: 4.2
+
+--- Page 1 ---
+1. Overview & General Safety Instructions
+This standard operating procedure outlines the monitoring, threshold limits, and maintenance protocols for all high-pressure fluid loops across production units. All operators must review these guidelines prior to operating pressure vessels.
+
+--- Page 2 ---
+2. Operating Limits
+Normal operating pressure ranges between 150 PSI and 220 PSI. Any pressure reading exceeding 250 PSI triggers an automatic warning alarm. At 280 PSI, the automated emergency pressure relief valve (PRV) opens to exhaust excess volume into the containment vent.
+
+--- Page 14 ---
+14. Thermal Dynamics and Pressure Variations
+Pressure can increase when the system temperature rises because of thermal expansion. In closed-loop systems, a rise of 10 degrees Celsius typically corresponds to an 8% to 12% rise in hydrostatic pressure if expansion reservoirs are isolated or restricted. When high pressure occurs, operators must first check system temperature gauges and verify that cooling water circulation is active before manually adjusting bleed valves.

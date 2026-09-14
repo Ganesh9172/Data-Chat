@@ -1,0 +1,11 @@
+{
+  "name": "data-chat-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "server": "python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview"
+  }
+}
