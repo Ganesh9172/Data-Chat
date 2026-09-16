@@ -18,7 +18,14 @@ from backend.database import (
     get_all_conversations,
     get_conversation,
     delete_conversation,
-    get_stats
+    get_stats,
+    create_knowledge_update,
+    approve_knowledge_update,
+    reject_knowledge_update,
+    revert_knowledge_update,
+    delete_knowledge_update,
+    get_all_knowledge_updates,
+    get_knowledge_update_by_id
 )
 from backend.models import (
     ChatRequest,
@@ -26,7 +33,9 @@ from backend.models import (
     QACreateRequest,
     ConversationCreateRequest,
     ConversationResponse,
-    StatsResponse
+    StatsResponse,
+    KnowledgeUpdateCreateRequest,
+    KnowledgeUpdateResponse
 )
 from backend.knowledge import (
     process_pdf_file,
@@ -35,14 +44,15 @@ from backend.knowledge import (
     KNOWLEDGE_DATA_DIR
 )
 from backend.chat import generate_chat_response
+from backend.embeddings import get_embedding, vector_to_bytes
 
-# Initialize SQLite database tables
+# Initialize Microsoft SQL Server database tables
 init_db()
 
 app = FastAPI(
     title="Firebird AI Backend",
-    description="Knowledge-Trained RAG Chatbot API with auto-updating knowledge base & Power BI integration readiness",
-    version="1.0.0"
+    description="Knowledge-Trained RAG Chatbot API with two-way communicative knowledge updates on Microsoft SQL Server",
+    version="2.0.0"
 )
 
 # Enable CORS for Vite frontend
@@ -61,6 +71,7 @@ def health_check():
     return {
         "status": "online",
         "service": "Firebird AI",
+        "database": "Microsoft SQL Server",
         "stats": stats
     }
 
@@ -101,7 +112,6 @@ async def upload_knowledge_file(file: UploadFile = File(...)):
                 content = f.read()
             result = process_text_content(content, filename, file_type=ext.replace(".", ""))
         else:
-            # Attempt to read as text
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             result = process_text_content(content, filename, file_type="text")
@@ -134,12 +144,70 @@ def add_qa_knowledge(payload: QACreateRequest):
 def list_knowledge():
     docs = get_all_documents()
     qa = get_all_qa_pairs()
+    updates = get_all_knowledge_updates()
     stats = get_stats()
     return {
         "documents": docs,
         "qa_pairs": qa,
+        "knowledge_updates": updates,
         "stats": stats
     }
+
+# --- Knowledge Updates Endpoints (Two-Way Communicative Knowledge System) ---
+@app.get("/api/knowledge/updates", response_model=List[KnowledgeUpdateResponse])
+def list_knowledge_updates():
+    return get_all_knowledge_updates()
+
+@app.post("/api/knowledge/updates", response_model=KnowledgeUpdateResponse)
+def create_update(payload: KnowledgeUpdateCreateRequest):
+    try:
+        emb = None
+        if payload.status == "approved":
+            emb = vector_to_bytes(get_embedding(f"{payload.original_information} {payload.corrected_information}"))
+        ku = create_knowledge_update(
+            original_information=payload.original_information,
+            corrected_information=payload.corrected_information,
+            source_document=payload.source_document,
+            source_page=payload.source_page,
+            reason=payload.reason,
+            status=payload.status or "approved",
+            embedding=emb
+        )
+        return ku
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create knowledge update: {str(e)}")
+
+@app.post("/api/knowledge/updates/{update_id}/approve")
+def approve_update(update_id: str):
+    ku = get_knowledge_update_by_id(update_id)
+    if not ku:
+        raise HTTPException(status_code=404, detail="Knowledge update not found")
+    emb = vector_to_bytes(get_embedding(f"{ku['original_information']} {ku['corrected_information']}"))
+    success = approve_knowledge_update(update_id, embedding=emb)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to approve update")
+    return {"status": "success", "message": f"Update {update_id} approved and indexed"}
+
+@app.post("/api/knowledge/updates/{update_id}/reject")
+def reject_update(update_id: str):
+    success = reject_knowledge_update(update_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Knowledge update not found")
+    return {"status": "success", "message": f"Update {update_id} rejected"}
+
+@app.post("/api/knowledge/updates/{update_id}/revert")
+def revert_update(update_id: str):
+    success = revert_knowledge_update(update_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Knowledge update not found")
+    return {"status": "success", "message": f"Update {update_id} reverted"}
+
+@app.delete("/api/knowledge/updates/{update_id}")
+def delete_update(update_id: str):
+    success = delete_knowledge_update(update_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Knowledge update not found")
+    return {"status": "success", "message": f"Update {update_id} deleted"}
 
 @app.delete("/api/knowledge/{item_id}")
 def remove_knowledge(item_id: str):
@@ -149,6 +217,9 @@ def remove_knowledge(item_id: str):
     # If not document, try deleting QA pair
     if delete_qa_pair(item_id):
         return {"status": "success", "message": f"Q&A pair {item_id} removed"}
+    # If not QA, try deleting knowledge update
+    if delete_knowledge_update(item_id):
+        return {"status": "success", "message": f"Knowledge update {item_id} removed"}
     raise HTTPException(status_code=404, detail="Knowledge item not found")
 
 # --- Conversation Management ---

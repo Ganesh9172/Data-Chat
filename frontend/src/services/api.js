@@ -94,3 +94,25 @@ export async function deleteKnowledgeItem(id) {
   if (!res.ok) throw new Error('Failed to delete knowledge item');
   return res.json();
 }
+
+export async function getKnowledgeUpdates() {
+  const res = await fetch(`${API_BASE}/knowledge/updates`);
+  if (!res.ok) throw new Error('Failed to fetch knowledge updates');
+  return res.json();
+}
+
+export async function revertKnowledgeUpdate(id) {
+  const res = await fetch(`${API_BASE}/knowledge/updates/${id}/revert`, {
+    method: 'POST'
+  });
+  if (!res.ok) throw new Error('Failed to revert knowledge update');
+  return res.json();
+}
+
+export async function deleteKnowledgeUpdate(id) {
+  const res = await fetch(`${API_BASE}/knowledge/updates/${id}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) throw new Error('Failed to delete knowledge update');
+  return res.json();
+}

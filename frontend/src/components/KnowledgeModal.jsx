@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, UploadCloud, FileText, HelpCircle, Database, Trash2, CheckCircle2 } from 'lucide-react';
-import { getKnowledgeBase, uploadKnowledgeDocument, addQAPair, deleteKnowledgeItem } from '../services/api';
+import { X, UploadCloud, FileText, HelpCircle, Database, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { getKnowledgeBase, uploadKnowledgeDocument, addQAPair, deleteKnowledgeItem, revertKnowledgeUpdate } from '../services/api';
 
 export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) {
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'qa' | 'browser'
-  const [knowledgeData, setKnowledgeData] = useState({ documents: [], qa_pairs: [], stats: {} });
+  const [knowledgeData, setKnowledgeData] = useState({ documents: [], qa_pairs: [], knowledge_updates: [], stats: {} });
   const [isUploading, setIsUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
 
@@ -85,6 +85,18 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
       onKnowledgeUpdated?.();
     } catch (err) {
       setStatusMessage({ type: 'error', text: err.message || 'Failed to delete item.' });
+    }
+  };
+
+  const handleRevertUpdate = async (id, updateNum) => {
+    if (!window.confirm(`Revert Knowledge Base Update #${updateNum}? Future answers will revert back to original PDF source text.`)) return;
+    try {
+      await revertKnowledgeUpdate(id);
+      setStatusMessage({ type: 'success', text: `Reverted Knowledge Update #${updateNum}.` });
+      await loadData();
+      onKnowledgeUpdated?.();
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to revert update.' });
     }
   };
 
@@ -266,6 +278,77 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                               >
                                 <Trash2 size={14} />
                               </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Field Knowledge Updates */}
+              <div>
+                <h4 style={{ fontSize: '0.9rem', color: '#fff', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <RefreshCw size={16} color="#10b981" />
+                  Field Knowledge Updates ({(knowledgeData.knowledge_updates || []).length})
+                </h4>
+                {(!knowledgeData.knowledge_updates || knowledgeData.knowledge_updates.length === 0) ? (
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No field corrections submitted yet.</p>
+                ) : (
+                  <div className="knowledge-table-container">
+                    <table className="knowledge-table">
+                      <thead>
+                        <tr>
+                          <th>Update</th>
+                          <th>Corrected Information</th>
+                          <th>Status</th>
+                          <th>Original Source</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {knowledgeData.knowledge_updates.map((ku) => (
+                          <tr key={ku.id}>
+                            <td style={{ color: '#fff', fontWeight: 500 }}>
+                              Update #{ku.update_number || 1}
+                            </td>
+                            <td style={{ maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {ku.corrected_information}
+                            </td>
+                            <td>
+                              <span
+                                className="badge"
+                                style={{
+                                  borderColor: ku.status === 'approved' ? '#10b981' : ku.status === 'reverted' ? '#64748b' : '#f59e0b',
+                                  color: ku.status === 'approved' ? '#34d399' : ku.status === 'reverted' ? '#94a3b8' : '#fbbf24'
+                                }}
+                              >
+                                {ku.status.toUpperCase()}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                              {ku.source_document ? `${ku.source_document}, P${ku.source_page || 1}` : 'Field note'}
+                            </td>
+                            <td>
+                              {ku.status === 'approved' ? (
+                                <button
+                                  className="delete-action-btn"
+                                  onClick={() => handleRevertUpdate(ku.id, ku.update_number || 1)}
+                                  title="Revert update"
+                                  style={{ color: '#f59e0b' }}
+                                >
+                                  <RefreshCw size={14} />
+                                </button>
+                              ) : (
+                                <button
+                                  className="delete-action-btn"
+                                  onClick={() => handleDelete(ku.id, `Update #${ku.update_number || 1}`)}
+                                  title="Delete update"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}

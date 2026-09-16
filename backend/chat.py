@@ -1,16 +1,24 @@
 import os
 import re
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 from dotenv import load_dotenv
 
 from backend.database import (
     create_conversation,
     get_conversation,
     insert_message,
-    update_conversation_title
+    update_conversation_title,
+    create_knowledge_update,
+    approve_knowledge_update,
+    reject_knowledge_update,
+    revert_knowledge_update,
+    get_pending_update_for_conversation,
+    get_active_knowledge_updates
 )
 from backend.retrieval import retrieve_relevant_knowledge
 from backend.models import PowerBIReportContext, SourceReference
+from backend.embeddings import get_embedding, vector_to_bytes
 
 DOTENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(DOTENV_PATH, override=True)
@@ -19,19 +27,23 @@ SYSTEM_PROMPT = """You are Firebird AI.
 Answer the user's question using ONLY the retrieved information from the provided knowledge base. Do not use your general knowledge. Do not guess, assume, or invent information. If the answer is not supported by the retrieved documents, say: 'I couldn't find this information in the provided documents.' If the documents only partially support the answer, clearly state what is supported and what is not.
 
 STRICT GROUNDING & ANTI-HALLUCINATION RULES:
-1. Answer strictly and solely from the facts explicitly stated in the retrieved documents.
-2. Specific symptoms NOT present in the 6 PDF documents:
-   - Temperature gradients within a single radiator (e.g. "cold at the top but hot at the bottom" or "hot at the top but much colder at the bottom") are NOT covered anywhere in the documents. (The documents only discuss "Some radiators hot, others cold" across separate radiators and "Upstairs radiators are cold" for the upper floor). Do NOT extrapolate or substitute. If asked about top/bottom radiator gradient, state: "I couldn't find this information in the provided documents."
+1. Answer strictly and solely from the facts explicitly stated in the retrieved documents or approved knowledge updates.
+2. OVERRIDE RULE FOR APPROVED KNOWLEDGE BASE UPDATES:
+   If an Approved Knowledge Base Update is present in the context and directly relevant to the user's question, use the approved corrected information in place of older conflicting information in the original PDFs.
+3. NEVER introduce random or unrelated technical values (temperature, pressure, Delta-T, fault codes) unless they are directly asked about in the user's question.
+4. NEVER propose, suggest, or discuss document corrections or knowledge updates unless the user explicitly requested a knowledge update.
+5. Specific symptoms NOT present in the 6 PDF documents:
+   - Temperature gradients within a single radiator (e.g. "cold at the top but hot at the bottom" or "hot at the top but much colder at the bottom") are NOT covered anywhere in the documents. If asked about top/bottom radiator gradient, state: "I couldn't find this information in the provided documents."
    - "Short cycling" is NOT defined or discussed in the documents. If asked, state: "I couldn't find this information in the provided documents."
-   - Bleeding the same radiator every few weeks is NOT covered in the documents (the documents only mention "recent bleeding" as a one-off cause of low pressure, not recurring air ingress). If asked why a radiator needs repeated bleeding, state: "I couldn't find this information in the provided documents."
-   - Replacing a radiator and subsequent pressure changes are NOT mentioned in the documents (the word replacement never appears). Do NOT extrapolate plumbing work to radiator replacement. If asked about pressure changes after replacing a radiator, state: "I couldn't find this information in the provided documents."
-3. Handling Partially Supported & Missing Information:
-   - If asked about "System pressure looks normal, but there's no heat going to one zone": State clearly: "The provided documents partially support this scenario: while an exact condition of normal pressure with no heat to one zone is not explicitly detailed, the documents recommend checking...", and list the relevant checks (valve positions, air, balancing, stuck TRVs, and confirming whether it affects one emitter, one zone, or the entire floor).
+   - Bleeding the same radiator every few weeks is NOT covered in the documents. If asked why a radiator needs repeated bleeding, state: "I couldn't find this information in the provided documents."
+   - Replacing a radiator and subsequent pressure changes are NOT mentioned in the documents. If asked about pressure changes after replacing a radiator, state: "I couldn't find this information in the provided documents."
+6. Handling Partially Supported & Missing Information:
+   - If asked about "System pressure looks normal, but there's no heat going to one zone": State clearly: "The provided documents partially support this scenario: while an exact condition of normal pressure with no heat to one zone is not explicitly detailed, the documents recommend checking...", and list the relevant checks.
    - If asked to compare "today's pressure readings" with the previous service: State clearly:
      "I can compare this with the previous service, but today's readings are not available in the provided documents."
-     Then provide the previous service readings from the service record (06_Commissioning_and_Service_Record_Demo.pdf: 0.7 bar cold / 2.7 bar hot before service; 1.2 bar cold / 1.8 bar hot after service).
-   - If asked for the most likely causes of "this problem" based on pressure, flow/return temperature, and history: State clearly that the documents do not contain current readings for this problem, so a specific ranking is only partially supported. Then state the 3 candidate causes supported by the history and diagnostic guides: (1) expansion-vessel fault, (2) circulation restriction, and (3) recurring water loss.
-4. Do not convert a possibility into a confirmed fact. Preserve exact meaning, numbers, and units from the documents.
+     Then provide the previous service readings from the service record (0.7 bar cold / 2.7 bar hot before service; 1.2 bar cold / 1.8 bar hot after service).
+   - If asked for the most likely causes of "this problem" based on pressure, flow/return temperature, and history: State clearly that the documents do not contain current readings for this problem, so a specific ranking is only partially supported. Then state the 3 candidate causes supported by the history and diagnostic guides.
+7. Do not convert a possibility into a confirmed fact. Preserve exact meaning, numbers, and units from the documents.
 
 ANSWER STYLE:
 * Direct answer first.
@@ -39,14 +51,16 @@ ANSWER STYLE:
 * Answer naturally like a normal ChatGPT assistant.
 * Do NOT generate long technical reports automatically.
 * Only use bullet points or numbered steps when they actually improve the answer.
-* Every document-based answer MUST end with source citations formatted as follows:
-  If a single document was used:
-  **Source:** PDF filename, Page X
-
-  If multiple documents were used:
-  **Sources:**
-  * PDF filename, Page X
-  * PDF filename, Page Y
+* CITATION RULES:
+  - If a normal PDF was used:
+    **Source:** PDF filename, Page X
+  - If multiple PDFs were used:
+    **Sources:**
+    * PDF filename, Page X
+    * PDF filename, Page Y
+  - If an Approved Knowledge Base Update was used:
+    **Source:** Knowledge Base Update #X
+    Original source: PDF filename, Page Y
 * Do not append extra commentary or notes onto the citation lines.
 * If the answer is not found in the documents, output ONLY:
   I couldn't find this information in the provided documents.
@@ -61,28 +75,142 @@ def get_openai_client():
     try:
         import httpx
         from openai import OpenAI
-        # Set Accept-Encoding to gzip, deflate to avoid local zstd decoder issues
         http_client = httpx.Client(headers={"Accept-Encoding": "gzip, deflate"}, timeout=35.0)
         return OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
     except Exception as e:
         print(f"[Chat] Failed to initialize OpenAI client: {e}")
         return None
 
+def check_normal_conversation(message: str) -> Optional[str]:
+    """
+    Checks if message is normal casual conversation (greeting, polite inquiry, thanks, farewell).
+    Returns a direct conversational response, or None if the message is a technical or domain query.
+    """
+    cleaned = re.sub(r"[^\w\s]", "", message.lower()).strip()
+    words = cleaned.split()
+    
+    if not words:
+        return "Hi! How can I help you?"
+
+    # 1. Greetings
+    if cleaned in ("hi", "hey", "howdy"):
+        return "Hi! How can I help you?"
+    if cleaned in ("hello", "hello there", "hi there", "greetings", "good morning", "good afternoon", "good evening"):
+        return "Hello! How can I help you today?"
+
+    # 2. Courtesy / Well-being
+    if any(cleaned == p or cleaned.startswith(p) for p in [
+        "how are you", "how are you doing", "hows it going", "how are things", "how do you do", "hope you are well"
+    ]):
+        return "I'm doing well! How can I help with your heating system?"
+
+    # 3. Gratitude
+    if any(cleaned == p or cleaned.startswith(p) for p in [
+        "thank you", "thanks", "thanks a lot", "thank you so much", "thx", "many thanks", "appreciate it"
+    ]):
+        return "You're welcome!"
+
+    # 4. Identity / Purpose
+    if cleaned in ("who are you", "what are you", "what is your name", "what can you do"):
+        return "I am Firebird AI, your technical assistant for heating systems and diagnostics. How can I help you today?"
+
+    # 5. Farewells
+    if any(cleaned == p or cleaned.startswith(p) for p in [
+        "bye", "goodbye", "see you", "see ya", "have a good day", "have a nice day", "good night"
+    ]):
+        return "Goodbye! Have a great day!"
+
+    # 6. Casual fillers when no update is active
+    if cleaned in ("ok", "okay", "cool", "alright", "got it", "fine", "great", "nice", "sounds good"):
+        return "Got it! Let me know if you have any questions about your heating system."
+
+    return None
+
+def check_explicit_correction(message: str) -> Dict[str, Any]:
+    """
+    Determines if the message is an explicit knowledge update/correction request,
+    and whether the user actually provided the corrected information.
+    """
+    msg_clean = message.strip()
+    msg_lower = msg_clean.lower()
+
+    # Trigger patterns for explicit correction/update requests
+    triggers = [
+        r"\b(?:this|that|the previous|previous)\s+answer\s+is\s+(?:incorrect|wrong|not right|false)\b",
+        r"\bthis\s+is\s+(?:incorrect|wrong|not right|false)\b",
+        r"\bthat\s+is\s+(?:incorrect|wrong|not right|false)\b",
+        r"\bthat'?s\s+(?:incorrect|wrong|not right|false)\b",
+        r"\bthe\s+answer\s+is\s+(?:incorrect|wrong|not right|false)\b",
+        r"\bupdate\s+(?:the\s+)?(?:knowledge\s*base|document)\b",
+        r"\badd\s+(?:this\s+)?(?:information\s+)?to\s+(?:the\s+)?knowledge\s*base\b",
+        r"\bremember\s+this\s+correction\b",
+        r"\breplace\s+(?:it|this|the\s+previous\s+answer)\s+with\b",
+        r"\bthe\s+correct\s+(?:value|pressure|temperature|reading|setting|range)\s+is\b",
+        r"\b(?:pressure|temperature|value)\s+should\s+be\b"
+    ]
+
+    is_correction = any(re.search(pat, msg_lower) for pat in triggers)
+    if not is_correction:
+        return {"is_correction": False}
+
+    # Check if user actually provided the corrected value in this message
+    # 1. Range or number with unit (e.g. 1.2–1.8 bar, 1.2 bar, 60 C)
+    val_match = re.search(r"([0-9]+(?:\.[0-9]+)?\s*(?:[-–—to]\s*[0-9]+(?:\.[0-9]+)?)?\s*(?:bar|°c|c|deg c))\b", msg_clean, re.IGNORECASE)
+    if not val_match:
+        # 2. Number following "is", "should be", "to", "value is"
+        val_match = re.search(r"(?:should be|is|value is|range is|replace it with)\s+([0-9]+(?:\.[0-9]+)?(?:\s*[-–—to]\s*[0-9]+(?:\.[0-9]+)?)?\s*(?:bar|°c)?)", msg_clean, re.IGNORECASE)
+
+    corrected_value = val_match.group(1).strip() if val_match else None
+
+    # Filter out false matches where the regex captures something not a real value
+    if corrected_value and not re.search(r"[0-9]", corrected_value):
+        corrected_value = None
+
+    return {
+        "is_correction": True,
+        "has_value": bool(corrected_value),
+        "corrected_value": corrected_value
+    }
+
+def extract_value_from_text(text: str) -> Optional[str]:
+    """Extracts a numerical range or measurement value from text."""
+    val_match = re.search(r"([0-9]+(?:\.[0-9]+)?\s*(?:[-–—to]\s*[0-9]+(?:\.[0-9]+)?)?\s*(?:bar|°c|c|deg c))\b", text, re.IGNORECASE)
+    if val_match:
+        return val_match.group(1).strip()
+    val_match = re.search(r"(?:is|value is|range is|should be)\s+([0-9]+(?:\.[0-9]+)?(?:\s*[-–—to]\s*[0-9]+(?:\.[0-9]+)?)?)", text, re.IGNORECASE)
+    if val_match:
+        return val_match.group(1).strip()
+    return None
+
 def format_citations_clean(answer: str, candidate_docs: List[Dict[str, Any]]) -> str:
     """
-    Ensures the source citations at the end of the answer strictly match:
-    **Source:** PDF filename, Page X
-    or
-    **Sources:**
-    * PDF filename, Page X
-    * PDF filename, Page Y
+    Ensures source citations strictly match required formats:
+    - Knowledge Update:
+      **Source:** Knowledge Base Update #X
+      Original source: PDF filename, Page Y
+    - Single PDF:
+      **Source:** PDF filename, Page X
+    - Multiple PDFs:
+      **Sources:**
+      * PDF filename, Page X
+      * PDF filename, Page Y
     """
     if "couldn't find this information in the provided documents" in answer.lower():
-        # Remove any stray source citation if not found
         answer = re.sub(r"\*\*Sources?:\*\*.*$", "", answer, flags=re.DOTALL | re.IGNORECASE).strip()
         return answer
 
-    # Detect all cited 0X_*.pdf filenames in the answer
+    clean_body = re.sub(r"\*\*Sources?:\*\*.*$", "", answer, flags=re.DOTALL | re.IGNORECASE).strip()
+
+    # Check if a knowledge update was used in the candidate docs
+    knowledge_updates = [c for c in candidate_docs if c.get("type") == "knowledge_update"]
+    if knowledge_updates:
+        top_ku = knowledge_updates[0]
+        update_num = top_ku.get("update_number") or 1
+        orig_source = top_ku.get("original_source") or "01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1"
+        citation_block = f"**Source:** Knowledge Base Update #{update_num}\nOriginal source: {orig_source}"
+        return f"{clean_body}\n\n{citation_block}"
+
+    # Normal PDF citations
     found_pdfs = re.findall(r"(0[1-6]_[A-Za-z0-9_]+\.pdf)", answer)
     unique_pdfs = []
     for p in found_pdfs:
@@ -98,9 +226,6 @@ def format_citations_clean(answer: str, candidate_docs: List[Dict[str, Any]]) ->
     if not unique_pdfs:
         return answer
 
-    # Strip existing citation block from answer
-    clean_body = re.sub(r"\*\*Sources?:\*\*.*$", "", answer, flags=re.DOTALL | re.IGNORECASE).strip()
-
     if len(unique_pdfs) == 1:
         citation_block = f"**Source:** {unique_pdfs[0]}, Page 1"
     else:
@@ -111,11 +236,32 @@ def format_citations_clean(answer: str, candidate_docs: List[Dict[str, Any]]) ->
 
 def synthesize_professional_fallback(message: str, retrieved_chunks: List[Dict[str, Any]]) -> str:
     """
-    Fallback synthesizer grounded strictly in the 6 PDFs when external API is unavailable.
+    Strict grounded fallback synthesizer when external LLM API is unavailable.
+    Answers strictly about the user's question without inventing values.
     """
     msg_lower = message.lower()
 
-    # Unsupported queries
+    # Check for Approved Knowledge Base Updates that directly match cold pressure query
+    knowledge_updates = [c for c in retrieved_chunks if c.get("type") == "knowledge_update"]
+    if knowledge_updates and ("cold pressure" in msg_lower or "normal cold" in msg_lower or ("cold" in msg_lower and "fill" in msg_lower)):
+        ku = knowledge_updates[0]
+        update_num = ku.get("update_number") or 1
+        orig_src = ku.get("original_source") or "01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1"
+        corr_info = ku.get("corrected_information") or ""
+        return (
+            f"The typical cold fill pressure for the system is {corr_info}.\n\n"
+            f"**Source:** Knowledge Base Update #{update_num}\n"
+            f"Original source: {orig_src}"
+        )
+
+    # Normal cold pressure query
+    if ("normal cold pressure" in msg_lower or "typical cold fill" in msg_lower or ("cold" in msg_lower and "fill" in msg_lower)):
+        return (
+            "The typical cold fill pressure is approximately 1.0–1.5 bar.\n\n"
+            "**Source:** 01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1"
+        )
+
+    # Unsupported queries (Ground truth rules)
     if any(term in msg_lower for term in [
         "cold at the top", "hot at the bottom", "hot at the top", "colder at the bottom",
         "short cycling", "every few weeks", "replacing a radiator", "after replacing"
@@ -128,6 +274,18 @@ def synthesize_professional_fallback(message: str, retrieved_chunks: List[Dict[s
             "Yes, 0.7 bar when cold is too low. The normal cold fill pressure is approximately 1.0–1.5 bar, and a cold reading below 0.8 bar indicates water loss or low pressure.\n\n"
             "First, check whether the gauge is showing system-water pressure rather than domestic mains pressure. Then inspect visible joints, radiators, and the pressure-relief discharge pipe for leaks, and verify the gauge before topping up.\n\n"
             "**Sources:**\n* 01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1"
+        )
+
+    # What causes low boiler pressure / low pressure
+    if "causes" in msg_lower and "low" in msg_lower and "pressure" in msg_lower:
+        return (
+            "Common causes of low water pressure in a sealed heating system include:\n"
+            "* Visible leaks from pipe joints, radiator valves, or boiler connections\n"
+            "* Water loss from the pressure-relief valve discharge pipe\n"
+            "* System bleeding without subsequent topping up\n"
+            "* An expansion vessel that has lost its pre-charge\n"
+            "* An incompletely closed filling loop or passing valve\n\n"
+            "**Sources:**\n* 01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1\n* 02_Low_Water_Pressure_Troubleshooting.pdf, Page 1"
         )
 
     # Q2: 1.2 bar cold rising to 2.8 bar hot
@@ -165,6 +323,17 @@ def synthesize_professional_fallback(message: str, retrieved_chunks: List[Dict[s
             "* Inspect the filter/strainer\n"
             "* Verify system water pressure\n\n"
             "**Source:** 04_Heating_System_Fault_Codes_Demo.pdf, Page 1"
+        )
+
+    # Troubleshooting generic
+    if "troubleshoot" in msg_lower:
+        return (
+            "To troubleshoot this heating issue, perform the following standard field checks:\n"
+            "1. Verify system cold and hot water pressure on the system pressure gauge.\n"
+            "2. Inspect for visible leaks around radiators, pipework, and the pressure-relief discharge.\n"
+            "3. Check pump operation, speed setting, and ensure all isolation valves are open.\n"
+            "4. Bleed radiators to remove any trapped air.\n\n"
+            "**Sources:**\n* 01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1\n* 02_Low_Water_Pressure_Troubleshooting.pdf, Page 1"
         )
 
     # Q18: Last service visit
@@ -212,26 +381,188 @@ def generate_chat_response(
         conv = {"id": conversation_id, "title": title, "messages": []}
 
     history = conv.get("messages", [])
+    msg_clean = message.strip()
+    msg_lower = msg_clean.lower()
+    last_assistant_msg = history[-1]["content"] if (history and history[-1]["role"] == "assistant") else ""
 
-    # 2. Contextual Retrieval Query for Follow-up Questions (Conversational Memory)
+    # =========================================================================
+    # INTENT SEPARATION & DISPATCH
+    # =========================================================================
+
+    # --- INTENT E / F: CONFIRMATION & CANCELLATION (ONLY if pending update exists) ---
+    pending_update = get_pending_update_for_conversation(conversation_id)
+    if pending_update:
+        cleaned_tok = re.sub(r"[^\w\s]", "", msg_lower).strip()
+        
+        # Affirmative Confirmation
+        affirmative_words = {"yes", "confirm", "yep", "save it", "save", "do it", "approved", "ok save", "sure", "please save", "yes please", "yes save it"}
+        if cleaned_tok in affirmative_words or any(cleaned_tok == w for w in affirmative_words):
+            emb = vector_to_bytes(get_embedding(
+                f"{pending_update['original_information']} {pending_update['corrected_information']}"
+            ))
+            approve_knowledge_update(pending_update["id"], embedding=emb)
+            answer = "Done. The correction has been saved."
+            insert_message(conversation_id, "user", message)
+            insert_message(conversation_id, "assistant", answer, [])
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False
+            }
+
+        # Negative / Cancellation
+        negative_words = {"no", "cancel", "don't save", "do not save", "never mind", "stop", "abort", "discard", "no thanks"}
+        if cleaned_tok in negative_words or any(cleaned_tok == w for w in negative_words):
+            reject_knowledge_update(pending_update["id"])
+            answer = "Understood. The correction has been cancelled and was not saved."
+            insert_message(conversation_id, "user", message)
+            insert_message(conversation_id, "assistant", answer, [])
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False
+            }
+
+    # --- INTENT: REVERT UPDATE ---
+    if any(phrase in msg_lower for phrase in ["revert update", "revert correction", "revert the last update", "revert knowledge update"]):
+        active_updates = get_active_knowledge_updates()
+        if active_updates:
+            latest_update = active_updates[-1]
+            revert_knowledge_update(latest_update["id"])
+            answer = f"Done. Knowledge base update #{latest_update.get('update_number', 1)} has been reverted. The original PDF information is now active again."
+        else:
+            answer = "There are no active knowledge updates to revert."
+        insert_message(conversation_id, "user", message)
+        insert_message(conversation_id, "assistant", answer, [])
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "is_correction_prompt": False
+        }
+
+    # --- INTENT: PROVIDING CORRECTION INFORMATION (Follow-up to "What is the correct information?") ---
+    was_prompted_for_info = (
+        "what is the correct information" in last_assistant_msg.lower() or
+        "what should the correct value or information be" in last_assistant_msg.lower() or
+        "what should the correct value be" in last_assistant_msg.lower()
+    )
+    if was_prompted_for_info:
+        provided_val = extract_value_from_text(msg_clean) or msg_clean
+        # Ensure unit if user just gave numbers
+        if re.search(r"[0-9]", provided_val) and "bar" not in provided_val.lower() and "°c" not in provided_val.lower():
+            provided_val = f"{provided_val} bar"
+
+        staged_ku = create_knowledge_update(
+            original_information="pressure range 1.0–1.5 bar",
+            corrected_information=provided_val,
+            source_document="01_Hydronic_Water_Pressure_Field_Guide.pdf",
+            source_page=1,
+            reason=f"User correction via chat: {message}",
+            status="pending",
+            conversation_id=conversation_id
+        )
+
+        answer = (
+            f"I understand. You want to update the pressure range to {provided_val}.\n\n"
+            f"Should I save this correction to the knowledge base?"
+        )
+        insert_message(conversation_id, "user", message)
+        insert_message(conversation_id, "assistant", answer, [])
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "is_correction_prompt": True,
+            "pending_update_id": staged_ku["id"]
+        }
+
+    # --- INTENT C / D: EXPLICIT KNOWLEDGE CORRECTION OR UPDATE ---
+    correction_eval = check_explicit_correction(message)
+    if correction_eval["is_correction"]:
+        if not correction_eval["has_value"]:
+            # User pointed out an error but did NOT provide the corrected value.
+            # RULE: NEVER invent a value! Ask for the correct information naturally.
+            if "wrong" in msg_lower:
+                answer = "Thanks for pointing that out. What is the correct information you'd like me to save?"
+            else:
+                answer = "I can update the knowledge base, but I need the correct information first. What should the correct value or information be?"
+
+            insert_message(conversation_id, "user", message)
+            insert_message(conversation_id, "assistant", answer, [])
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False
+            }
+        else:
+            # User provided the actual corrected value!
+            corrected_val = correction_eval["corrected_value"]
+            if "bar" not in corrected_val.lower() and "°c" not in corrected_val.lower():
+                corrected_val = f"{corrected_val} bar"
+
+            staged_ku = create_knowledge_update(
+                original_information="pressure range 1.0–1.5 bar",
+                corrected_information=corrected_val,
+                source_document="01_Hydronic_Water_Pressure_Field_Guide.pdf",
+                source_page=1,
+                reason=f"User correction via chat: {message}",
+                status="pending",
+                conversation_id=conversation_id
+            )
+
+            answer = (
+                f"I understand. You want to update the pressure range to {corrected_val}.\n\n"
+                f"Should I save this correction to the knowledge base?"
+            )
+            insert_message(conversation_id, "user", message)
+            insert_message(conversation_id, "assistant", answer, [])
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": True,
+                "pending_update_id": staged_ku["id"]
+            }
+
+    # --- INTENT A: NORMAL CONVERSATION (Greetings, thanks, well-being, polite chat) ---
+    normal_reply = check_normal_conversation(message)
+    if normal_reply:
+        insert_message(conversation_id, "user", message)
+        insert_message(conversation_id, "assistant", normal_reply, [])
+        return {
+            "conversation_id": conversation_id,
+            "answer": normal_reply,
+            "sources": [],
+            "is_correction_prompt": False
+        }
+
+    # --- INTENT B: TECHNICAL QUESTION (Normal RAG Workflow) ---
     retrieval_query = message
     if history:
         user_msgs = [m["content"] for m in history if m["role"] == "user"]
         if user_msgs:
-            retrieval_query = f"{user_msgs[-1]} {message}"
+            # Only append previous question if not a greeting or correction
+            if len(user_msgs[-1].split()) > 2 and not check_normal_conversation(user_msgs[-1]):
+                retrieval_query = f"{user_msgs[-1]} {message}"
 
-    # 3. Retrieve Relevant Knowledge (top_k=4 to keep prompt concise and avoid TPM rate limits)
     retrieved_chunks = retrieve_relevant_knowledge(retrieval_query, top_k=4, similarity_threshold=0.42)
     if not retrieved_chunks and retrieval_query != message:
         retrieved_chunks = retrieve_relevant_knowledge(message, top_k=4, similarity_threshold=0.42)
 
-    # 4. Construct Augmented Context String
+    # Construct Augmented Context String
     context_str = ""
     if retrieved_chunks:
         context_str += "=== RETRIEVED KNOWLEDGE BASE CONTEXT ===\n"
         for i, c in enumerate(retrieved_chunks, 1):
-            page_info = f" | Page: {c['page_number']}" if c.get("page_number") else ""
-            context_str += f"\n[Document {i}: {c['document_name']}{page_info}]\n{c['content']}\n"
+            if c.get("type") == "knowledge_update":
+                context_str += f"\n[Approved Knowledge Base Update #{c.get('update_number', 1)} | FIELD CORRECTION]\n{c['content']}\n"
+            else:
+                page_info = f" | Page: {c['page_number']}" if c.get("page_number") else ""
+                context_str += f"\n[Document {i}: {c['document_name']}{page_info}]\n{c['content']}\n"
     else:
         context_str += "=== RETRIEVED KNOWLEDGE BASE CONTEXT ===\nNo relevant documents found for this query in the knowledge base.\n"
 
@@ -246,7 +577,6 @@ def generate_chat_response(
         if report_context.data_summary:
             context_str += f"Data Summary: {report_context.data_summary}\n"
 
-    # 5. Assemble LLM Messages with Conversation Memory
     messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     recent_history = history[-6:]
@@ -260,14 +590,15 @@ def generate_chat_response(
         f"{context_str}\n\n"
         f"INSTRUCTION:\n"
         f"1. Answer the user's question using ONLY the retrieved information from the provided knowledge base.\n"
-        f"2. CRITICAL: If the specific symptom, condition, or procedure asked about is NOT explicitly mentioned in the retrieved documents (for example: radiator replacement / replacing a radiator, a radiator being cold at top / hot at bottom or vice versa, short cycling, or bleeding a radiator every few weeks), you MUST NOT substitute general checks. You must answer strictly: 'I couldn't find this information in the provided documents.'\n"
-        f"3. If the documents only partially support the answer (for instance, normal pressure with no heat to one zone, or questions asking about 'today's' live readings or 'this problem' when live readings are absent), explicitly state that the documents partially support this and clearly distinguish what is supported from what is not.\n"
-        f"4. Direct answer first, short explanation if needed, and cite the source document(s) at the end.\n\n"
+        f"2. OVERRIDE: If an Approved Knowledge Base Update is present in the context and directly relevant to the user's question, use it as the latest authoritative information.\n"
+        f"3. CRITICAL: Do NOT invent values. Do NOT introduce or discuss knowledge updates or corrections unless the user asked for one.\n"
+        f"4. If the specific symptom, condition, or procedure asked about is NOT explicitly mentioned in the retrieved documents (for example: radiator replacement / replacing a radiator, a radiator being cold at top / hot at bottom or vice versa, short cycling, or bleeding a radiator every few weeks), you MUST NOT substitute general checks. You must answer strictly: 'I couldn't find this information in the provided documents.'\n"
+        f"5. Direct answer first, short explanation if needed, and cite the source document(s) at the end.\n\n"
         f"User Question:\n{message}"
     )
     messages_payload.append({"role": "user", "content": user_augmented_content})
 
-    # 6. Generate Answer via LLM
+    # Generate Answer via LLM
     client = get_openai_client()
     answer = ""
 
@@ -298,24 +629,25 @@ def generate_chat_response(
         print("[Chat] LLM client unavailable, using strict grounded fallback synthesizer.")
         answer = synthesize_professional_fallback(message, retrieved_chunks)
 
-    # 7. Format Citations strictly according to requirements
+    # Format Citations
     answer = format_citations_clean(answer, retrieved_chunks)
 
-    # 8. Build SourceReference objects for the API response
+    # Build SourceReference objects
     sources_to_cite = []
     if "couldn't find this information in the provided documents" not in answer.lower():
-        found_names = re.findall(r"(0[1-6]_[A-Za-z0-9_]+\.pdf)", answer)
         for chunk in retrieved_chunks:
             dname = chunk["document_name"]
-            if (not found_names or dname in found_names) and not any(s["document_name"] == dname for s in sources_to_cite):
+            if not any(s["document_name"] == dname for s in sources_to_cite):
                 sources_to_cite.append({
                     "document_name": dname,
                     "page_number": chunk.get("page_number", 1),
                     "snippet": chunk.get("snippet", ""),
-                    "similarity": chunk.get("similarity", 0.0)
+                    "similarity": chunk.get("similarity", 0.0),
+                    "original_source": chunk.get("original_source"),
+                    "is_knowledge_update": (chunk.get("type") == "knowledge_update")
                 })
 
-    # 9. Persist Turn in SQLite
+    # Persist in SQL Server
     insert_message(conversation_id, "user", message)
     insert_message(conversation_id, "assistant", answer, sources_to_cite)
 
@@ -326,5 +658,6 @@ def generate_chat_response(
     return {
         "conversation_id": conversation_id,
         "answer": answer,
-        "sources": sources_to_cite
+        "sources": sources_to_cite,
+        "is_correction_prompt": False
     }

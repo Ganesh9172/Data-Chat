@@ -13,7 +13,10 @@ from backend.database import (
     delete_qa_pair,
     get_all_documents,
     get_all_qa_pairs,
-    get_db_connection
+    get_db_session,
+    Chunk,
+    Document,
+    QAPair
 )
 from backend.embeddings import (
     get_embedding,
@@ -232,18 +235,20 @@ def process_qa_entry(question: str, answer: str, source: str = "User Approved Q&
 
 def sync_official_knowledge_base():
     """
-    Synchronizes the SQLite database with the 6 official source-of-truth PDFs in data/knowledge.
+    Synchronizes the database with the 6 official source-of-truth PDFs in data/knowledge.
     Cleans up duplicate documents, obsolete chunks, and unverified QA entries.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Clean up old documents and chunks
-    cursor.execute("DELETE FROM chunks")
-    cursor.execute("DELETE FROM documents")
-    cursor.execute("DELETE FROM qa_pairs")
-    conn.commit()
-    conn.close()
+    session = get_db_session()
+    try:
+        session.query(Chunk).delete()
+        session.query(Document).delete()
+        session.query(QAPair).delete()
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
     
     pdf_pattern = os.path.join(KNOWLEDGE_DATA_DIR, "0*.pdf")
     pdf_files = sorted(glob.glob(pdf_pattern))
