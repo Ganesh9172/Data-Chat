@@ -14,6 +14,7 @@ ENV/
 *.db
 *.sqlite
 *.sqlite3
+data/*.tmp*
 
 # Node / Vite
 node_modules/

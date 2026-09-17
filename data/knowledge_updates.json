@@ -1,0 +1,36 @@
+[
+  {
+    "id": "6999b350-6f41-4729-86eb-edb23d8df1e6",
+    "update_number": 1,
+    "conversation_id": "89541086-5600-48dc-8458-e270c6741136",
+    "original_information": "pressure range 1.0–1.5 bar",
+    "corrected_information": "1.2–1.8 bar",
+    "source_document": "01_Hydronic_Water_Pressure_Field_Guide.pdf",
+    "source_page": 1,
+    "reason": "User correction via chat: This is incorrect. For our latest system it should be 1.2–1.8 bar. Update the document.",
+    "status": "reverted",
+    "created_by": "authorized_user",
+    "created_at": "2026-09-17T09:07:56.046239",
+    "approved_at": "2026-09-17T09:07:56.169276",
+    "version": 1,
+    "active": false,
+    "embedding": "vJ4MvS+YBb3zmWg9CYoLvdqURb35eMk85hknPcrBAzrqOzI7CYoLvRVaAr2dMXO9frfEPAmKCz2NP3G9CwnhvD860jw/OlK8bNyXvegCUjzW3I89D+DWO/tmlD1ptWy9vBX3PBYpjTtS6Sk8PtWcvGyRAjyAvy++ygyZOxxTg70PlcG8VB3qvMrtWL03QdG7+D9pO0Qr6LsoT883eTAEvNqURT3ux5I8o6Z+PKX+Hr1u5IK8euBOPUrwqLxqhHc9YxSMPSefBL3eIKa8Yqo2PIsLsbxqWKK8YMELPcxxzrwnNS892v4avYL4DzxLv7M7qu+0vOi3vLrnnRy+ZA9sPeNcUT0vmIU8IHUOO1CwST2ue5U8ZhdXPfWh0zqaSEg88crdO/VWvrwKpCu90lAvvDfX+zv+tPQ8McxFPZa857kk4i48g11Fvco4br0YXc280lAvPDqUUb1DXN09XU/LO5bbpztPlik9RvpyvcDs7LyACkW9XZrgPF25oLvS5lk8u0bsutEXTzvMB3m9go66PkTgUrz3Jck8xmF4vEQr6DwsRYU9GkuYPADu1DzbgpC846fmPB/xmDvgn/s9tDs2vRpLGD0Rg4y9q1RqvAmKC70WVeK8oKMzvV1uizs1OWY8g/NvvDaRBr0jP/k7iJlwu4fpJT2f7sg6bNyXPGaBrD3KokO9rhFAPQ9KrDxMjj69R8n9uoL4D71qWKI8oXK+vAR6NT3FsS09vJ6MPbMC1rlYyAq9LEWFvVULtTyGGpu9s9YAvXkwBD5+1gS9UwPKPDhgEb0JILa8KG4PvdTUJD308Qi9qqQfPG+zDT3klTG8ND6GvchuAz3qpYe8B+fVvPniHj3IuZi8Cu9AvUQr6LzFR1g9F62CvfTxiLzNQNk6Li6wPN5ruzonn4Q9807TPNsYO7zXQUW7WeKqPVBGdDz8y8m8yYijvL1tlzsJa8s8bUHNPBzKbTw7gpw8rvL/u8G7dzxLoHM8kGacvVTxFL33Jck8NpGGPd0GhrvMB3m9ND6GvUNc3TwNYYG8cc0tPcP01zzxNDM9ekokvUfJfb1eHtY9+rGpPE7HnjrFZhg9JEyEuyy8bz0yuhA8gxIwOgCE/7r54p68qu80vcfqjbv5l4k8Qd2HvQ1hgTpKpZO98X9IPV/TQL3OeTm9SdaIPQbNNT1iqjY8LsRavOhsp773jx49ueG2vNWEb7yVwQc+wdq3OnE3gz1DMIi9Q3sdvWWyobtvs409Ec6hvEqlE73Fsa08Zd72u12a4Duq7zQ9tIbLvJCxMbwS6ME7xJeNO8ALLT3wsD29XW4LPTCTZbynffS7abXsPVKelL0+ige8ZjaXut/QcDswZxA8zi6kO0nWiL34P2m8Yqq2PCwmxbxjFAw9ND4GvXin7jwpPRq787goPWqjNzu9Tte88ekdvMZheL35DvQ8XJ8APWruzL0P/5a8ltsnPUi3yDzw+9I85+ixvO9LiLrOD2S9NpGGvTa9WzwWVWK8+eKevRxTgzvAdQI9iCIGPQWzFTw0H8a9DY3WPACjvzwFaAC9ZWeMPY4O/DzdBoa8yE/DPABYqjq/8Yw924KQPWhQt7x7ZMQ8gtlPPVv8Sr3+PQq9UBofPOczR7xoULc9ftYEPYi4sDw/WZK6HFODPO3zZ7yIA0Y9/OqJvCDAo7zoTee8daQjO5iL8ro/7zw9jg78vBf4l760pYu8cjJjPIN8BT055Aa8GpYtveqlhz3AwBe9slILvRJSlzwo5fm9NtwbPcgErjtDEcg8G88NvVNtH70FSUA875YdvSwmRT1Plim9PedRPVjICj2cNhM+PtWcPOxDHT1HM9M8MlC7vLf4i7tcnwC8CSA2PGHbq7s1OeY6w8iCPSM/eb0yBaY8NghxPa33H7sSfuy8RzPTPGjm4bz86ok7qoVfPM55Ob24xxY8nmpTPVBltL3UiQ+9RhmzvTU55jz1wJO5SykJvW/+Ij2HymU9gHQaPQL2PzxsJ609IY8uvKKrnrzJiKM8mrIdvAbNNTwwsqU863QSOSVmJL0gwCM9"
+  },
+  {
+    "id": "7c86aa60-880a-4718-b16f-e76972a83636",
+    "update_number": 2,
+    "conversation_id": "966a885d-3cb5-4b0a-8ab8-7669d511f29f",
+    "original_information": "pressure range 1.0–1.5 bar",
+    "corrected_information": "3.0 bar",
+    "source_document": "01_Hydronic_Water_Pressure_Field_Guide.pdf",
+    "source_page": 1,
+    "reason": "User correction via chat: This is wrong. Change it to 3.0 bar.",
+    "status": "rejected",
+    "created_by": "authorized_user",
+    "created_at": "2026-09-17T09:08:05.438802",
+    "approved_at": null,
+    "version": 1,
+    "active": false,
+    "embedding": null
+  }
+]

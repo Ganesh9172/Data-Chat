@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Sparkles, RotateCcw, MessageSquare, Database } from 'lucide-react';
 import MessageItem from './MessageItem';
 import ChatInput from './ChatInput';
@@ -11,15 +11,71 @@ export default function ChatArea({
   onNewChat,
   onToggleDrawer
 }) {
-  const messagesEndRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const messagesContentRef = useRef(null);
+  const isUserNearBottomRef = useRef(true);
 
+  // Reliable scroll-to-bottom utility directly operating on the message container
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    if (behavior === 'smooth') {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+    } else {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, []);
+
+  // Track if user is scrolled near bottom (within 130px threshold)
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const threshold = 130;
+    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isUserNearBottomRef.current = distanceToBottom <= threshold;
+  }, []);
+
+  // Auto-scroll on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+    const lastMsg = messages[messages.length - 1];
+    // If the latest message was sent by user, force pin to bottom and scroll
+    if (lastMsg && lastMsg.role === 'user') {
+      isUserNearBottomRef.current = true;
+      scrollToBottom('smooth');
+    } else if (isUserNearBottomRef.current) {
+      scrollToBottom('smooth');
+    }
+  }, [messages, scrollToBottom]);
+
+  // Auto-scroll when loading state toggles (e.g. typing indicator appears/disappears)
+  useEffect(() => {
+    if (isUserNearBottomRef.current) {
+      scrollToBottom('smooth');
+    }
+  }, [loading, scrollToBottom]);
+
+  // Keep following streamed/expanding content as long as the user hasn't scrolled away
+  useEffect(() => {
+    const contentEl = messagesContentRef.current;
+    if (!contentEl) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (isUserNearBottomRef.current) {
+        scrollToBottom('auto');
+      }
+    });
+
+    resizeObserver.observe(contentEl);
+    return () => resizeObserver.disconnect();
+  }, [scrollToBottom]);
 
   return (
     <main className="chat-main-layout">
-      {/* Top Banner exactly matching the screenshot reference */}
+      {/* Top Banner exactly matching the design reference */}
       <header className="bot-header-banner">
         <div className="bot-header-left">
           <div className="bot-sparkle-icon">
@@ -61,9 +117,13 @@ export default function ChatArea({
         </div>
       </header>
 
-      {/* Messages Scroll Area */}
-      <div className="messages-scroll-area">
-        <div className="messages-centered-column">
+      {/* Messages Scroll Area with its own vertical scroll and container ref */}
+      <div
+        className="messages-scroll-area"
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+      >
+        <div className="messages-centered-column" ref={messagesContentRef}>
           {messages.length === 0 ? (
             <div className="empty-chat-state">
               <p className="empty-chat-prompt">
@@ -93,7 +153,12 @@ export default function ChatArea({
             </div>
           )}
 
-          <div ref={messagesEndRef} />
+          {/* Bottom spacing element so the last word is never covered by the floating input */}
+          <div
+            className="chat-bottom-spacer"
+            style={{ height: '96px', flexShrink: 0, pointerEvents: 'none' }}
+            aria-hidden="true"
+          />
         </div>
       </div>
 

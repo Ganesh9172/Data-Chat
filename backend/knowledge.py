@@ -13,10 +13,7 @@ from backend.database import (
     delete_qa_pair,
     get_all_documents,
     get_all_qa_pairs,
-    get_db_session,
-    Chunk,
-    Document,
-    QAPair
+    clear_official_knowledge
 )
 from backend.embeddings import (
     get_embedding,
@@ -126,10 +123,9 @@ def process_pdf_file(file_path: str, original_filename: str) -> Dict[str, Any]:
     """
     doc_id = str(uuid.uuid4())
     file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
-    insert_document(doc_id, original_filename, "pdf", file_size)
-    
     reader = PdfReader(file_path)
     total_pages = len(reader.pages)
+    insert_document(doc_id, original_filename, "pdf", file_size, page_count=total_pages)
     
     chunks_to_embed = []
     
@@ -140,6 +136,8 @@ def process_pdf_file(file_path: str, original_filename: str) -> Dict[str, Any]:
         for chunk in text_chunks:
             chunks_to_embed.append({
                 "page_number": page_num,
+                "page_start": page_num,
+                "page_end": page_num,
                 "content": chunk
             })
             
@@ -157,6 +155,8 @@ def process_pdf_file(file_path: str, original_filename: str) -> Dict[str, Any]:
             "document_id": doc_id,
             "document_name": original_filename,
             "page_number": item["page_number"],
+            "page_start": item.get("page_start", item["page_number"]),
+            "page_end": item.get("page_end", item["page_number"]),
             "content": item["content"],
             "embedding": vector_to_bytes(emb)
         })
@@ -238,17 +238,7 @@ def sync_official_knowledge_base():
     Synchronizes the database with the 6 official source-of-truth PDFs in data/knowledge.
     Cleans up duplicate documents, obsolete chunks, and unverified QA entries.
     """
-    session = get_db_session()
-    try:
-        session.query(Chunk).delete()
-        session.query(Document).delete()
-        session.query(QAPair).delete()
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        raise e
-    finally:
-        session.close()
+    clear_official_knowledge()
     
     pdf_pattern = os.path.join(KNOWLEDGE_DATA_DIR, "0*.pdf")
     pdf_files = sorted(glob.glob(pdf_pattern))

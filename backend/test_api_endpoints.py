@@ -22,7 +22,7 @@ def test_api():
     health_data = resp.json()
     print("Health response:", health_data)
     assert health_data["status"] == "online"
-    assert health_data["database"] == "Microsoft SQL Server"
+    assert health_data["database"] == "JSON File Storage"
     assert health_data["stats"]["documents"] >= 6
     print(">> Health check PASSED!")
 

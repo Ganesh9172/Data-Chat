@@ -46,12 +46,12 @@ from backend.knowledge import (
 from backend.chat import generate_chat_response
 from backend.embeddings import get_embedding, vector_to_bytes
 
-# Initialize Microsoft SQL Server database tables
+# Initialize JSON file storage
 init_db()
 
 app = FastAPI(
     title="Firebird AI Backend",
-    description="Knowledge-Trained RAG Chatbot API with two-way communicative knowledge updates on Microsoft SQL Server",
+    description="Knowledge-Trained RAG Chatbot API with two-way communicative knowledge updates using JSON storage",
     version="2.0.0"
 )
 
@@ -71,7 +71,7 @@ def health_check():
     return {
         "status": "online",
         "service": "Firebird AI",
-        "database": "Microsoft SQL Server",
+        "database": "JSON File Storage",
         "stats": stats
     }
 

@@ -184,13 +184,13 @@ def extract_value_from_text(text: str) -> Optional[str]:
 
 def format_citations_clean(answer: str, candidate_docs: List[Dict[str, Any]]) -> str:
     """
-    Ensures source citations strictly match required formats:
+    Ensures source citations strictly match required formats based on backend retrieval metadata:
     - Knowledge Update:
       **Source:** Knowledge Base Update #X
       Original source: PDF filename, Page Y
-    - Single PDF:
+    - Single PDF source / page:
       **Source:** PDF filename, Page X
-    - Multiple PDFs:
+    - Multiple PDF sources / pages:
       **Sources:**
       * PDF filename, Page X
       * PDF filename, Page Y
@@ -201,35 +201,71 @@ def format_citations_clean(answer: str, candidate_docs: List[Dict[str, Any]]) ->
 
     clean_body = re.sub(r"\*\*Sources?:\*\*.*$", "", answer, flags=re.DOTALL | re.IGNORECASE).strip()
 
-    # Check if a knowledge update was used in the candidate docs
+    if not candidate_docs:
+        return clean_body
+
+    # 1. Check if a knowledge update was actually used in the answer
     knowledge_updates = [c for c in candidate_docs if c.get("type") == "knowledge_update"]
+    used_ku = None
     if knowledge_updates:
-        top_ku = knowledge_updates[0]
-        update_num = top_ku.get("update_number") or 1
-        orig_source = top_ku.get("original_source") or "01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1"
+        for ku in knowledge_updates:
+            corr_info = (ku.get("corrected_information") or "").lower()
+            up_num_str = f"update #{ku.get('update_number', '')}".lower()
+            # If explicit mention or if key content from corrected_information is in answer
+            key_tokens = [w for w in re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", corr_info) if len(w) > 2 and w not in {"this", "that", "with", "from", "should", "bar", "the"}]
+            if (
+                up_num_str in clean_body.lower()
+                or "knowledge base update" in clean_body.lower()
+                or (key_tokens and sum(1 for t in key_tokens if t in clean_body.lower()) >= max(1, len(key_tokens) // 2))
+            ):
+                used_ku = ku
+                break
+        # If candidate_docs ONLY contains knowledge updates, treat top one as used
+        if not used_ku and all(c.get("type") == "knowledge_update" for c in candidate_docs):
+            used_ku = knowledge_updates[0]
+
+    if used_ku:
+        update_num = used_ku.get("update_number") or 1
+        orig_source = used_ku.get("original_source") or "01_Hydronic_Water_Pressure_Field_Guide.pdf, Page 1"
         citation_block = f"**Source:** Knowledge Base Update #{update_num}\nOriginal source: {orig_source}"
         return f"{clean_body}\n\n{citation_block}"
 
-    # Normal PDF citations
-    found_pdfs = re.findall(r"(0[1-6]_[A-Za-z0-9_]+\.pdf)", answer)
-    unique_pdfs = []
-    for p in found_pdfs:
-        if p not in unique_pdfs:
-            unique_pdfs.append(p)
+    # 2. Extract unique (document_name, page) sources from candidate_docs
+    unique_sources = []
+    seen_entries = set()
 
-    if not unique_pdfs:
-        for c in candidate_docs:
-            dname = c.get("document_name", "")
-            if dname.endswith(".pdf") and dname not in unique_pdfs:
-                unique_pdfs.append(dname)
+    for c in candidate_docs:
+        if c.get("type") == "knowledge_update":
+            continue
+        dname = c.get("document_name")
+        if not dname:
+            continue
+        page_num = c.get("page_number")
+        page_start = c.get("page_start")
+        page_end = c.get("page_end")
 
-    if not unique_pdfs:
-        return answer
+        if page_start is not None and page_end is not None and page_start != page_end:
+            page_str = f"Pages {page_start}–{page_end}"
+            key = (dname, page_start, page_end)
+        elif page_num is not None:
+            page_str = f"Page {page_num}"
+            key = (dname, page_num)
+        else:
+            page_str = ""
+            key = (dname, None)
 
-    if len(unique_pdfs) == 1:
-        citation_block = f"**Source:** {unique_pdfs[0]}, Page 1"
+        if key not in seen_entries:
+            seen_entries.add(key)
+            formatted = f"{dname}, {page_str}" if page_str else dname
+            unique_sources.append(formatted)
+
+    if not unique_sources:
+        return clean_body
+
+    if len(unique_sources) == 1:
+        citation_block = f"**Source:** {unique_sources[0]}"
     else:
-        bullets = "\n".join([f"* {p}, Page 1" for p in unique_pdfs])
+        bullets = "\n".join([f"* {s}" for s in unique_sources])
         citation_block = f"**Sources:**\n{bullets}"
 
     return f"{clean_body}\n\n{citation_block}"
@@ -357,8 +393,24 @@ def synthesize_professional_fallback(message: str, retrieved_chunks: List[Dict[s
     if not retrieved_chunks:
         return "I couldn't find this information in the provided documents."
 
-    doc_names = list({c.get("document_name") for c in retrieved_chunks if c.get("document_name")})
-    citation = f"**Source:** {doc_names[0]}, Page 1" if len(doc_names) == 1 else "**Sources:**\n" + "\n".join([f"* {d}, Page 1" for d in doc_names])
+    seen_fb = set()
+    fb_sources = []
+    for c in retrieved_chunks:
+        d = c.get("document_name")
+        if not d:
+            continue
+        p = c.get("page_number")
+        key = (d, p)
+        if key not in seen_fb:
+            seen_fb.add(key)
+            fb_sources.append(f"{d}, Page {p}" if p else d)
+
+    if not fb_sources:
+        citation = ""
+    elif len(fb_sources) == 1:
+        citation = f"**Source:** {fb_sources[0]}"
+    else:
+        citation = "**Sources:**\n" + "\n".join([f"* {s}" for s in fb_sources])
     return f"Based on the provided technical documentation, please verify system water pressure, check for leaks, and inspect circulator pump and valve positions.\n\n{citation}"
 
 def generate_chat_response(
@@ -549,9 +601,9 @@ def generate_chat_response(
             if len(user_msgs[-1].split()) > 2 and not check_normal_conversation(user_msgs[-1]):
                 retrieval_query = f"{user_msgs[-1]} {message}"
 
-    retrieved_chunks = retrieve_relevant_knowledge(retrieval_query, top_k=4, similarity_threshold=0.42)
+    retrieved_chunks = retrieve_relevant_knowledge(retrieval_query, top_k=5, similarity_threshold=0.42)
     if not retrieved_chunks and retrieval_query != message:
-        retrieved_chunks = retrieve_relevant_knowledge(message, top_k=4, similarity_threshold=0.42)
+        retrieved_chunks = retrieve_relevant_knowledge(message, top_k=5, similarity_threshold=0.42)
 
     # Construct Augmented Context String
     context_str = ""
@@ -632,15 +684,24 @@ def generate_chat_response(
     # Format Citations
     answer = format_citations_clean(answer, retrieved_chunks)
 
-    # Build SourceReference objects
+    # Build SourceReference objects preserving distinct (document_name, page_number)
     sources_to_cite = []
+    seen_sources = set()
     if "couldn't find this information in the provided documents" not in answer.lower():
+        is_ku_answer = "knowledge base update" in answer.lower()
         for chunk in retrieved_chunks:
+            if chunk.get("type") == "knowledge_update" and not is_ku_answer:
+                continue
             dname = chunk["document_name"]
-            if not any(s["document_name"] == dname for s in sources_to_cite):
+            page = chunk.get("page_number")
+            key = (dname, page)
+            if key not in seen_sources:
+                seen_sources.add(key)
                 sources_to_cite.append({
                     "document_name": dname,
-                    "page_number": chunk.get("page_number", 1),
+                    "page_number": page,
+                    "page_start": chunk.get("page_start", page),
+                    "page_end": chunk.get("page_end", page),
                     "snippet": chunk.get("snippet", ""),
                     "similarity": chunk.get("similarity", 0.0),
                     "original_source": chunk.get("original_source"),

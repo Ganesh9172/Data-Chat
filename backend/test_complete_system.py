@@ -45,14 +45,14 @@ def run_tests():
     print("FIREBIRD AI — COMPREHENSIVE BACKEND & TWO-WAY KNOWLEDGE VERIFICATION")
     print("=" * 75)
 
-    # 1. Verify Microsoft SQL Server Database & Stats
-    print("\n--- TEST 1: SQL Server Connection & Initial Stats ---")
+    # 1. Verify JSON Storage & Stats
+    print("\n--- TEST 1: JSON Storage Initial Stats ---")
     init_db()
     stats = get_stats()
-    print("SQL Server current stats:", stats)
-    assert stats["documents"] >= 6, "Expected at least 6 documents in SQL Server"
-    assert stats["chunks"] >= 29, "Expected at least 29 chunks in SQL Server"
-    print(">> TEST 1 PASSED: SQL Server is connected and populated!")
+    print("JSON storage current stats:", stats)
+    assert stats["documents"] >= 6, "Expected at least 6 documents in JSON storage"
+    assert stats["chunks"] >= 29, "Expected at least 29 chunks in JSON storage"
+    print(">> TEST 1 PASSED: JSON storage is initialized and populated!")
 
     # 2. Record initial PDF checksums to ensure immutability
     print("\n--- TEST 2: Original PDF Immutability Baseline ---")
@@ -119,7 +119,7 @@ def run_tests():
     active_updates = get_active_knowledge_updates()
     assert len(active_updates) == 1, f"Expected 1 active update in SQL Server, found {len(active_updates)}"
     saved_ku = active_updates[0]
-    print(f"Verified SQL Server record: Update #{saved_ku.get('update_number')} | {saved_ku['corrected_information']} | Status: {saved_ku['status']}")
+    print(f"Verified JSON storage record: Update #{saved_ku.get('update_number')} | {saved_ku['corrected_information']} | Status: {saved_ku['status']}")
     assert "1.2" in saved_ku["corrected_information"] and "1.8" in saved_ku["corrected_information"]
     print(">> TEST 6 PASSED: Knowledge correction successfully approved and indexed in SQL Server!")
 

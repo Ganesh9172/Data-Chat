@@ -4,6 +4,8 @@ from typing import List, Optional, Dict, Any
 class SourceReference(BaseModel):
     document_name: str
     page_number: Optional[int] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
     snippet: str
     similarity: Optional[float] = None
     original_source: Optional[str] = None

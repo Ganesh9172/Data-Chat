@@ -78,8 +78,9 @@ def retrieve_relevant_knowledge(
             
             # An update is relevant ONLY if:
             # 1. Very strong semantic match (sim >= 0.72), OR
-            # 2. Strong semantic match (sim >= 0.58) AND at least one shared non-stopword technical token
-            is_relevant = (sim >= 0.72) or (sim >= 0.58 and len(shared_content) >= 1)
+            # 2. Strong semantic match (sim >= 0.65) AND at least one shared non-stopword technical token, OR
+            # 3. Moderate semantic match (sim >= 0.58) AND at least two shared non-stopword technical tokens
+            is_relevant = (sim >= 0.72) or (sim >= 0.65 and len(shared_content) >= 1) or (sim >= 0.58 and len(shared_content) >= 2)
             
             if is_relevant:
                 update_num = u.get("update_number") or 1
@@ -179,9 +180,14 @@ def retrieve_relevant_knowledge(
         
         doc_name = chunk["document_name"]
         snippet = chunk["content"][:240] + ("..." if len(chunk["content"]) > 240 else "")
+        page_num = chunk.get("page_number")
+        page_start = chunk.get("page_start", page_num)
+        page_end = chunk.get("page_end", page_num)
         hybrid_matches.append({
             "document_name": doc_name,
-            "page_number": chunk.get("page_number") or 1,
+            "page_number": page_num if page_num is not None else 1,
+            "page_start": page_start,
+            "page_end": page_end,
             "snippet": snippet,
             "content": chunk["content"],
             "similarity": round(combined, 4),
@@ -204,7 +210,7 @@ def retrieve_relevant_knowledge(
                 continue
             dname = item["document_name"]
             doc_count = seen_docs.get(dname, 0)
-            if doc_count < 2:
+            if doc_count < 3:
                 filtered.append(item)
                 seen_docs[dname] = doc_count + 1
             if len(filtered) >= top_k:
