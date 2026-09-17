@@ -4324,5 +4324,558 @@
         "created_at": "2026-09-17T09:37:42.024846"
       }
     ]
+  },
+  {
+    "id": "bfe5e39a-fb00-4f78-b14c-2addf900c38b",
+    "title": "hi",
+    "created_at": "2026-09-17T11:59:44.190973",
+    "updated_at": "2026-09-17T11:59:44.402934",
+    "messages": [
+      {
+        "id": "c637c2bb-a6d9-4b70-a042-e360ef894ba9",
+        "conversation_id": "bfe5e39a-fb00-4f78-b14c-2addf900c38b",
+        "role": "user",
+        "content": "hi",
+        "sources": null,
+        "created_at": "2026-09-17T11:59:44.285625"
+      },
+      {
+        "id": "3c031d8f-1596-4fc1-8946-d456c7aa8667",
+        "conversation_id": "bfe5e39a-fb00-4f78-b14c-2addf900c38b",
+        "role": "assistant",
+        "content": "Hi! How can I help you?",
+        "sources": [],
+        "created_at": "2026-09-17T11:59:44.402934"
+      }
+    ]
+  },
+  {
+    "id": "0c6b4b41-9d5b-4359-9424-7233d5d70eeb",
+    "title": "Hi",
+    "created_at": "2026-09-17T12:01:36.522583",
+    "updated_at": "2026-09-17T12:02:08.307088",
+    "messages": [
+      {
+        "id": "c12eee2b-c50a-4c69-ab71-745bdfa8f9b5",
+        "conversation_id": "0c6b4b41-9d5b-4359-9424-7233d5d70eeb",
+        "role": "user",
+        "content": "Hi",
+        "sources": null,
+        "created_at": "2026-09-17T12:01:36.639112"
+      },
+      {
+        "id": "eaa64157-628c-4d0b-bc9a-eb7361b45bb7",
+        "conversation_id": "0c6b4b41-9d5b-4359-9424-7233d5d70eeb",
+        "role": "assistant",
+        "content": "Hi! How can I help you?",
+        "sources": [],
+        "created_at": "2026-09-17T12:01:36.766973"
+      },
+      {
+        "id": "8b9092ac-3ae7-431e-b22e-ca43a89309f0",
+        "conversation_id": "0c6b4b41-9d5b-4359-9424-7233d5d70eeb",
+        "role": "user",
+        "content": "What is f32",
+        "sources": null,
+        "created_at": "2026-09-17T12:02:08.279687"
+      },
+      {
+        "id": "a6a0514c-4519-4902-9626-8671fb3e7e53",
+        "conversation_id": "0c6b4b41-9d5b-4359-9424-7233d5d70eeb",
+        "role": "assistant",
+        "content": "**F32 – Insufficient circulation detected**  \n\n*Agent‑guided first checks:*  \n- Check pump operation  \n- Verify isolation valves are open  \n- Look for air in the system  \n- Inspect the filter/strainer  \n- Check system pressure\n\n**Source:** 04_Heating_System_Fault_Codes_Demo.pdf, Page 1",
+        "sources": [
+          {
+            "document_name": "04_Heating_System_Fault_Codes_Demo.pdf",
+            "page_number": 1,
+            "page_start": 1,
+            "page_end": 1,
+            "snippet": "1. Demo fault-code table\n Code\nDemo description\nAgent-guided first checks\nF10\nLow system water pressure\nConfirm gauge reading; check for recent bleeding/leaks;\nverify approved fill range in model manual\nF21\nFlow-temperature sensor\nimplausib...",
+            "similarity": 0.7398,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:02:08.307088"
+      }
+    ]
+  },
+  {
+    "id": "c69f3f53-0aef-4610-b1a6-f8a4b54f95f5",
+    "title": "hi",
+    "created_at": "2026-09-17T12:03:24.465556",
+    "updated_at": "2026-09-17T12:03:24.572323",
+    "messages": [
+      {
+        "id": "37503aaf-b28f-4549-89d4-3c77b818bbd0",
+        "conversation_id": "c69f3f53-0aef-4610-b1a6-f8a4b54f95f5",
+        "role": "user",
+        "content": "hi",
+        "sources": null,
+        "created_at": "2026-09-17T12:03:24.494685"
+      },
+      {
+        "id": "82d73d72-c8a2-43d5-ab67-c884020c2096",
+        "conversation_id": "c69f3f53-0aef-4610-b1a6-f8a4b54f95f5",
+        "role": "assistant",
+        "content": "Hi! How can I help you?",
+        "sources": [],
+        "created_at": "2026-09-17T12:03:24.572323"
+      }
+    ]
+  },
+  {
+    "id": "13ec55ed-15bb-4222-8603-51c7d333a72d",
+    "title": "Hi",
+    "created_at": "2026-09-17T12:10:59.959081",
+    "updated_at": "2026-09-17T12:11:00.265979",
+    "messages": [
+      {
+        "id": "3538c7dd-3b98-4fd9-8591-4c486bd6665c",
+        "conversation_id": "13ec55ed-15bb-4222-8603-51c7d333a72d",
+        "role": "user",
+        "content": "Hi",
+        "sources": null,
+        "created_at": "2026-09-17T12:11:00.021530"
+      },
+      {
+        "id": "80ec31a2-8bbe-458d-8c2c-3d357179da14",
+        "conversation_id": "13ec55ed-15bb-4222-8603-51c7d333a72d",
+        "role": "assistant",
+        "content": "Hi! How can I help you?",
+        "sources": [],
+        "created_at": "2026-09-17T12:11:00.265979"
+      }
+    ]
+  },
+  {
+    "id": "b80e6b3b-7fcc-46e3-b3b8-52518c45eb4a",
+    "title": "The radiator is hot at the top but much...",
+    "created_at": "2026-09-17T12:11:07.183601",
+    "updated_at": "2026-09-17T12:12:08.353245",
+    "messages": [
+      {
+        "id": "1438cdfa-eaba-4279-ac7e-450e184aae8e",
+        "conversation_id": "b80e6b3b-7fcc-46e3-b3b8-52518c45eb4a",
+        "role": "user",
+        "content": "The radiator is hot at the top but much colder at the bottom. What could be wrong?\"",
+        "sources": null,
+        "created_at": "2026-09-17T12:11:12.442431"
+      },
+      {
+        "id": "9147dee1-17e9-4880-88de-0f61cbdf04d7",
+        "conversation_id": "b80e6b3b-7fcc-46e3-b3b8-52518c45eb4a",
+        "role": "assistant",
+        "content": "I couldn't find this information in the provided documents.",
+        "sources": [],
+        "created_at": "2026-09-17T12:11:12.477232"
+      },
+      {
+        "id": "651192e2-45ac-4cb4-b904-dc0bcd6f3120",
+        "conversation_id": "b80e6b3b-7fcc-46e3-b3b8-52518c45eb4a",
+        "role": "user",
+        "content": "What two modern methods are used to eliminate air from a hydronic system?",
+        "sources": null,
+        "created_at": "2026-09-17T12:12:08.156079"
+      },
+      {
+        "id": "8b2a1b2a-5295-41b6-81a5-bbe01ec7c8ff",
+        "conversation_id": "b80e6b3b-7fcc-46e3-b3b8-52518c45eb4a",
+        "role": "assistant",
+        "content": "I couldn't find this information in the provided documents.",
+        "sources": [],
+        "created_at": "2026-09-17T12:12:08.353245"
+      }
+    ]
+  },
+  {
+    "id": "2fc524d5-422b-4e12-ab3c-c366aba7ec99",
+    "title": "Hi",
+    "created_at": "2026-09-17T12:12:28.710579",
+    "updated_at": "2026-09-17T12:12:40.491052",
+    "messages": [
+      {
+        "id": "870638bf-6437-44bf-8d4c-e12f24616baf",
+        "conversation_id": "2fc524d5-422b-4e12-ab3c-c366aba7ec99",
+        "role": "user",
+        "content": "Hi",
+        "sources": null,
+        "created_at": "2026-09-17T12:12:28.741467"
+      },
+      {
+        "id": "ad2efc6a-cd35-4039-a3de-d77e640c88ed",
+        "conversation_id": "2fc524d5-422b-4e12-ab3c-c366aba7ec99",
+        "role": "assistant",
+        "content": "Hi! How can I help you?",
+        "sources": [],
+        "created_at": "2026-09-17T12:12:28.790143"
+      },
+      {
+        "id": "c1e8d1df-1526-4475-bc67-095331a04b80",
+        "conversation_id": "2fc524d5-422b-4e12-ab3c-c366aba7ec99",
+        "role": "user",
+        "content": "What is f32",
+        "sources": null,
+        "created_at": "2026-09-17T12:12:40.444679"
+      },
+      {
+        "id": "c6d959e3-7e87-435f-8a36-473a47c28cfd",
+        "conversation_id": "2fc524d5-422b-4e12-ab3c-c366aba7ec99",
+        "role": "assistant",
+        "content": "**F32 – Insufficient circulation detected**  \n*Agent‑guided first checks:* Check pump operation, isolation valves, air, filter/strainer and system pressure.\n\n**Source:** 04_Heating_System_Fault_Codes_Demo.pdf, Page 1",
+        "sources": [
+          {
+            "document_name": "04_Heating_System_Fault_Codes_Demo.pdf",
+            "page_number": 1,
+            "page_start": 1,
+            "page_end": 1,
+            "snippet": "1. Demo fault-code table\n Code\nDemo description\nAgent-guided first checks\nF10\nLow system water pressure\nConfirm gauge reading; check for recent bleeding/leaks;\nverify approved fill range in model manual\nF21\nFlow-temperature sensor\nimplausib...",
+            "similarity": 0.7398,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:12:40.491052"
+      }
+    ]
+  },
+  {
+    "id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+    "title": "The radiator is hot at the top but much...",
+    "created_at": "2026-09-17T12:13:49.891395",
+    "updated_at": "2026-09-17T12:26:55.300341",
+    "messages": [
+      {
+        "id": "f5b6b1f9-e8f6-4601-baf9-afc719c5222d",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "The radiator is hot at the top but much colder at the bottom. What could be wrong?",
+        "sources": null,
+        "created_at": "2026-09-17T12:13:54.198240"
+      },
+      {
+        "id": "a03ce989-c146-4940-a04e-0a3004bc383a",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "I couldn't find this information in the provided documents.",
+        "sources": [],
+        "created_at": "2026-09-17T12:13:54.246061"
+      },
+      {
+        "id": "8c8ea06f-3f16-492d-8d26-3810e27154bb",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "What inlet water temperature to a boiler can cause flue gases to condense?",
+        "sources": null,
+        "created_at": "2026-09-17T12:14:12.011307"
+      },
+      {
+        "id": "8f8ea9fc-b664-46bf-80a2-c65c68e26341",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "Inlet water temperatures **below approximately 130 °F** can cause the flue gases to condense.\n\n**Sources:**\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 36\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 45",
+        "sources": [
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 36,
+            "page_start": 36,
+            "page_end": 36,
+            "snippet": "14. SYMPTOM: Corrosion of the venting system. \nPossible cause(s): \n• Return water temperature to the boiler is below the \ndewpoint of the flue gases causing them to condense in \nthe venting and the chimney.\n• Leakage at joints in the vent p...",
+            "similarity": 0.8757,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 45,
+            "page_start": 45,
+            "page_end": 45,
+            "snippet": "2. WHAT’S WRONG: A temperature-responsive \nboiler bypass circulator is installed with \nthe intent of preventing sustained flue gas \ncondensation, but condensation still occurs.\nThe system shown in Figure 5-2a uses a temperature-\nresponsive ...",
+            "similarity": 0.7206,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:14:12.053904"
+      },
+      {
+        "id": "21fe3e59-73e8-450a-9f4e-67a0035d980d",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "What two modern methods are used to eliminate air from a hydronic system?",
+        "sources": null,
+        "created_at": "2026-09-17T12:16:41.055247"
+      },
+      {
+        "id": "4dd57c0f-c335-4f21-819b-996b4f996830",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "The documents mention **float‑type air vents** as a modern way to remove air from a hydronic system, but they do not list a second modern method.\n\n**Sources:**\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 36\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 45",
+        "sources": [
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 36,
+            "page_start": 36,
+            "page_end": 36,
+            "snippet": "14. SYMPTOM: Corrosion of the venting system. \nPossible cause(s): \n• Return water temperature to the boiler is below the \ndewpoint of the flue gases causing them to condense in \nthe venting and the chimney.\n• Leakage at joints in the vent p...",
+            "similarity": 0.8591,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 45,
+            "page_start": 45,
+            "page_end": 45,
+            "snippet": "2. WHAT’S WRONG: A temperature-responsive \nboiler bypass circulator is installed with \nthe intent of preventing sustained flue gas \ncondensation, but condensation still occurs.\nThe system shown in Figure 5-2a uses a temperature-\nresponsive ...",
+            "similarity": 0.7258,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:16:41.078984"
+      },
+      {
+        "id": "f34befd5-9fa4-4660-9471-343d4ce9c0d5",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "The pump sounds like it is running, but I'm getting poor circulation. What should I look at?",
+        "sources": null,
+        "created_at": "2026-09-17T12:17:04.342235"
+      },
+      {
+        "id": "243d92b3-d48e-4e30-8deb-80460b51bd8b",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "**Check the following items when the pump runs but circulation is weak:**\n\n- **Valve positions** – make sure no supply or return valves are closed or partially throttled.  \n- **Filter/strainer condition** – a dirty or clogged filter can restrict flow.  \n- **Air in the system** – trapped air reduces water movement; consider bleeding or using an air‑separator.  \n- **Pump setting or speed** – verify the pump is set for the required flow and isn’t limited by an incorrect setting.  \n- **Hydraulic restrictions** – look for pipe blockages, sludge, or other obstructions that limit flow.  \n- **System balancing** – ensure flow is properly distributed to all zones; poor balancing can cause low circulation despite a running pump.\n\n**Sources:**\n* 03_Flow_Temperature_DeltaT_and_Circulation.pdf, Page 1\n* 05_Field_Plumber_FAQ_Knowledge_Base.pdf, Page 1\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 16",
+        "sources": [
+          {
+            "document_name": "03_Flow_Temperature_DeltaT_and_Circulation.pdf",
+            "page_number": 1,
+            "page_start": 1,
+            "page_end": 1,
+            "snippet": "DEMO / TRAINING MATERIAL - synthetic technical content, not an official Firebird manual\nPage 1\n Flow Temperature, Delta-T & Circulation\nDemo technical note | Ref: DEMO-HYD-022\nImportant: This document is fictional material created for an AI...",
+            "similarity": 0.749,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "05_Field_Plumber_FAQ_Knowledge_Base.pdf",
+            "page_number": 1,
+            "page_start": 1,
+            "page_end": 1,
+            "snippet": "1. Common questions\n Field question\nDemo answer\nWhat pressure should I see?\nFirst confirm the model and whether this is a sealed heating circuit. In\nthis demo example, roughly 1.0-1.5 bar cold is normal, but use the\nproduct-specific manual ...",
+            "similarity": 0.7474,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 16,
+            "page_start": 16,
+            "page_end": 16,
+            "snippet": "2. Use of a microbubble air separator to capture and eject \ninitially dissolved air.\nForced water purging relies on high-speed water flow \nthrough piping from some external pressure source (i.e., \na hose connected to a pressurized water sys...",
+            "similarity": 0.6765,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:17:04.419782"
+      },
+      {
+        "id": "afa8b9b1-9a7f-41f9-bfb9-b7b9456779cb",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "The radiator is hot at the top but much colder at the bottom. What could be wrong?",
+        "sources": null,
+        "created_at": "2026-09-17T12:21:14.474314"
+      },
+      {
+        "id": "4c05fa2f-227f-472c-a9fe-592fe0dfc4df",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "I couldn't find this information in the provided documents.",
+        "sources": [],
+        "created_at": "2026-09-17T12:21:14.511661"
+      },
+      {
+        "id": "d099de0d-2822-49d1-b4c3-f0941cd95bb9",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "How much more does PEX tubing expand/contract compared to copper for the same temperature change?",
+        "sources": null,
+        "created_at": "2026-09-17T12:21:51.754307"
+      },
+      {
+        "id": "99c6bd59-5bfa-4558-af48-f668ef65cd28",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "PEX tubing expands or contracts roughly **10 times more** than the same length of copper tubing for a given temperature change.\n\n**Sources:**\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 29\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 42\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 31\n* 03_Flow_Temperature_DeltaT_and_Circulation.pdf, Page 1",
+        "sources": [
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 29,
+            "page_start": 29,
+            "page_end": 29,
+            "snippet": "8. SYMPTOM: “Ticking” sounds from the \npiping. \nPossible cause(s): \n• Pipes rubbing against wood or metal framing as they \nexpand and contract (see Figure 4-9a).\n• Pipes moving through improperly secured pipe supports.\n• PEX tubing expandin...",
+            "similarity": 0.849,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 42,
+            "page_start": 42,
+            "page_end": 42,
+            "snippet": "17. SYMPTOM: Insufficient heat output from the \nheated wood-framed floor. \nPossible cause(s):\n• Lack of aluminum heat transfer plates (e.g., “plateless \nstapleup”, see Figure 4-18a).\n• Poorly fitted or installed heat transfer plates (see Fi...",
+            "similarity": 0.6923,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 31,
+            "page_start": 31,
+            "page_end": 31,
+            "snippet": "3130\n• Always align the holes through the framing and size the holes to allow \na minimum 1/8” space around the outside of the pipe.\n• Use PEX-AL-PEX tubing in combination with aluminum heat transfer \nplates (lower coefficient of expansion)....",
+            "similarity": 0.6598,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "03_Flow_Temperature_DeltaT_and_Circulation.pdf",
+            "page_number": 1,
+            "page_start": 1,
+            "page_end": 1,
+            "snippet": "2. Symptom matrix\n Symptom\nPossible causes\nUseful evidence\nHigh flow temperature + much\ncooler return\nLow flow rate; closed/restricted valves;\ndirty filter; air; pump setting; hydraulic\nrestriction\nFlow/return temperatures, pump\nstatus, val...",
+            "similarity": 0.6525,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:21:51.772734"
+      },
+      {
+        "id": "0ebb6fd1-4642-4fed-aed5-9a45ea48b170",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "What inlet water temperature to a boiler can cause flue gases to condense?",
+        "sources": null,
+        "created_at": "2026-09-17T12:22:44.820177"
+      },
+      {
+        "id": "25a05c3c-220b-4dd4-9efa-bae8ec7cd9cf",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "Inlet water temperatures **below about 130 °F** can cause flue gases to condense.\n\n**Sources:**\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 29\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 36",
+        "sources": [
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 29,
+            "page_start": 29,
+            "page_end": 29,
+            "snippet": "8. SYMPTOM: “Ticking” sounds from the \npiping. \nPossible cause(s): \n• Pipes rubbing against wood or metal framing as they \nexpand and contract (see Figure 4-9a).\n• Pipes moving through improperly secured pipe supports.\n• PEX tubing expandin...",
+            "similarity": 0.849,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 36,
+            "page_start": 36,
+            "page_end": 36,
+            "snippet": "14. SYMPTOM: Corrosion of the venting system. \nPossible cause(s): \n• Return water temperature to the boiler is below the \ndewpoint of the flue gases causing them to condense in \nthe venting and the chimney.\n• Leakage at joints in the vent p...",
+            "similarity": 0.8077,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:22:44.851849"
+      },
+      {
+        "id": "99d28dcb-d01d-47c8-bcdd-44009b43400a",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "What temperature drop is typical for panel radiators or fan-coils at design load?",
+        "sources": null,
+        "created_at": "2026-09-17T12:24:02.015437"
+      },
+      {
+        "id": "2a7209aa-feb7-4223-af63-157c42cf6426",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "Typical temperature drops for panel radiators or fan‑coils at design load are about **25 °F to 30 °F**.\n\n**Sources:**\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 36\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 22",
+        "sources": [
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 36,
+            "page_start": 36,
+            "page_end": 36,
+            "snippet": "14. SYMPTOM: Corrosion of the venting system. \nPossible cause(s): \n• Return water temperature to the boiler is below the \ndewpoint of the flue gases causing them to condense in \nthe venting and the chimney.\n• Leakage at joints in the vent p...",
+            "similarity": 0.8684,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 22,
+            "page_start": 22,
+            "page_end": 22,
+            "snippet": "1. SYMPTOM: Large \ntemperature drop between \nthe supply and return sides of \na hydronic heating circuit.\nPossible cause(s): Most hydronic \nheating circuits that operate with a \ntemperature drop of more than 25ºF \nwhen the heat source is del...",
+            "similarity": 0.7758,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:24:02.119236"
+      },
+      {
+        "id": "fa2f0ff0-db04-463b-b152-89ccdce8d08b",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "user",
+        "content": "What temperature drop is typical for panel radiators or fan coils at design load?",
+        "sources": null,
+        "created_at": "2026-09-17T12:26:55.262656"
+      },
+      {
+        "id": "99247869-b5c6-4e4f-aaed-a996a4e54c07",
+        "conversation_id": "974422fd-5cd0-41f7-86fb-b6c9736d5c5f",
+        "role": "assistant",
+        "content": "Typical design‑load temperature drops for panel radiators or fan‑coils are **about 25 °F to 30 °F**.\n\n**Sources:**\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 22\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 4\n* Idronics_32_NA_Troubleshooting hydronic systems.pdf, Page 53",
+        "sources": [
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 22,
+            "page_start": 22,
+            "page_end": 22,
+            "snippet": "1. SYMPTOM: Large \ntemperature drop between \nthe supply and return sides of \na hydronic heating circuit.\nPossible cause(s): Most hydronic \nheating circuits that operate with a \ntemperature drop of more than 25ºF \nwhen the heat source is del...",
+            "similarity": 0.8485,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 4,
+            "page_start": 4,
+            "page_end": 4,
+            "snippet": "PB4\nTABLE OF CONTENTS\n Thermal equilibrium\n Hydraulic equilibrium \n Steady state vs. Transient \n operation\n1 5 INTRODUCTION\n 55 APPENDIX B: CALEFFI PLUMBING COMPONENTS\n 55 APPENDIX C: GENERIC COMPONENTS\nSECTION PAGE \n STEP 1: Learn what the...",
+            "similarity": 0.6897,
+            "original_source": null,
+            "is_knowledge_update": false
+          },
+          {
+            "document_name": "Idronics_32_NA_Troubleshooting hydronic systems.pdf",
+            "page_number": 53,
+            "page_start": 53,
+            "page_end": 53,
+            "snippet": "5352\nconnecting at the bottom of the radiator. This reversal \ncauses flow to move backward through the radiator’s valve, \nwhich can result in cavitation or “thumping” sounds when \nthe valve plug is close to its seat. Most panel radiators \nh...",
+            "similarity": 0.6697,
+            "original_source": null,
+            "is_knowledge_update": false
+          }
+        ],
+        "created_at": "2026-09-17T12:26:55.300341"
+      }
+    ]
   }
 ]
