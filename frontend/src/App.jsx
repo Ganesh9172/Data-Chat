@@ -71,6 +71,12 @@ First check: confirm that the gauge is showing system-water pressure rather than
           { document_name: '05_Field_Plumber_FAQ_Knowledge_Base.pdf', page_number: 1, snippet: 'Normal cold fill range 1.0-1.5 bar' },
           { document_name: '02_Low_Water_Pressure_Troubleshooting.pdf', page_number: 1, snippet: 'Confirm gauge is system water pressure' }
         ],
+        related_video: {
+          title: "How to Increase Boiler Pressure and Check Your Pressure Gauge",
+          url: "https://www.youtube.com/watch?v=I3HgvV2mIqY",
+          thumbnail_url: "https://i.ytimg.com/vi/I3HgvV2mIqY/hqdefault.jpg",
+          video_id: "I3HgvV2mIqY"
+        },
         created_at: new Date().toISOString()
       }
     ]
@@ -228,6 +234,7 @@ export default function App() {
         role: 'assistant',
         content: response.answer,
         sources: response.sources || [],
+        related_video: response.related_video || null,
         created_at: new Date().toISOString()
       };
       setMessages((prev) => [...prev, aiMsg]);

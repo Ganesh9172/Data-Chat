@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Sparkles, RotateCcw, MessageSquare, Database } from 'lucide-react';
+import { Sparkles, RotateCcw, MessageSquare, Database, Menu } from 'lucide-react';
 import MessageItem from './MessageItem';
 import ChatInput from './ChatInput';
 
@@ -79,6 +79,15 @@ export default function ChatArea({
       {/* Top Banner exactly matching the design reference */}
       <header className="bot-header-banner">
         <div className="bot-header-left">
+          <button
+            type="button"
+            className="header-menu-btn"
+            onClick={onToggleDrawer}
+            title="Menu"
+            aria-label="Open sidebar menu"
+          >
+            <Menu size={20} color="#FFFFFF" />
+          </button>
           <div className="bot-sparkle-icon">
             <Sparkles size={22} color="#FFFFFF" fill="#FFFFFF" />
           </div>
@@ -91,9 +100,10 @@ export default function ChatArea({
         <div className="bot-header-right">
           <button
             type="button"
-            className="header-icon-btn"
+            className="header-icon-btn header-chats-btn"
             onClick={onToggleDrawer}
             title="Recent Chats"
+            aria-label="Recent Chats"
           >
             <MessageSquare size={18} color="#FFFFFF" />
           </button>
@@ -104,6 +114,7 @@ export default function ChatArea({
               className="header-icon-btn"
               onClick={onOpenKnowledge}
               title="Knowledge Base (Admin)"
+              aria-label="Knowledge Base"
             >
               <Database size={18} color="#FFFFFF" />
             </button>
@@ -114,6 +125,7 @@ export default function ChatArea({
             className="header-icon-btn refresh-btn"
             onClick={onNewChat}
             title="New Chat"
+            aria-label="New Chat"
           >
             <RotateCcw size={19} color="#FFFFFF" />
           </button>
@@ -157,11 +169,7 @@ export default function ChatArea({
           )}
 
           {/* Bottom spacing element so the last word is never covered by the floating input */}
-          <div
-            className="chat-bottom-spacer"
-            style={{ height: '96px', flexShrink: 0, pointerEvents: 'none' }}
-            aria-hidden="true"
-          />
+          <div className="chat-bottom-spacer" aria-hidden="true" />
         </div>
       </div>
 

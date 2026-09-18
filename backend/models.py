@@ -23,12 +23,19 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     report_context: Optional[PowerBIReportContext] = None
 
+class RelatedVideo(BaseModel):
+    title: str
+    url: str
+    thumbnail_url: str
+    video_id: Optional[str] = None
+
 class ChatResponse(BaseModel):
     conversation_id: str
     answer: str
     sources: List[SourceReference] = []
     is_correction_prompt: Optional[bool] = False
     pending_update_id: Optional[str] = None
+    related_video: Optional[RelatedVideo] = None
 
 class QACreateRequest(BaseModel):
     question: str = Field(..., min_length=1)

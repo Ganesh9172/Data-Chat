@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, Trash2, Database, X, Lock, LogOut, Shield } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, Database, X, Lock, LogOut, Shield, Sparkles } from 'lucide-react';
 
 export default function Sidebar({
   isOpen,
@@ -31,10 +31,12 @@ export default function Sidebar({
       <aside className={`recent-chats-drawer ${isOpen ? 'open' : ''}`}>
         <div className="drawer-header">
           <div className="drawer-title-row">
-            <MessageSquare size={18} color="#1877F2" />
-            <span className="drawer-title">Recent Chats</span>
+            <div className="drawer-sparkle-badge">
+              <Sparkles size={16} color="#FFFFFF" fill="#FFFFFF" />
+            </div>
+            <span className="drawer-title">Firebird AI</span>
           </div>
-          <button className="drawer-close-btn" onClick={onClose} title="Close drawer">
+          <button className="drawer-close-btn" onClick={onClose} title="Close drawer" aria-label="Close drawer">
             <X size={18} />
           </button>
         </div>
@@ -93,6 +95,12 @@ export default function Sidebar({
             <Plus size={16} strokeWidth={2.5} />
             <span>New Chat</span>
           </button>
+        </div>
+
+        {/* Section Header: Recent Chats */}
+        <div className="drawer-section-title">
+          <MessageSquare size={14} color="#64748B" />
+          <span>Recent Chats</span>
         </div>
 
         {/* Session Conversation List */}

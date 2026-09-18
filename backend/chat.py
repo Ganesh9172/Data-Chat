@@ -20,6 +20,7 @@ from backend.database import (
 from backend.retrieval import retrieve_relevant_knowledge
 from backend.models import PowerBIReportContext, SourceReference
 from backend.embeddings import get_embedding, vector_to_bytes
+from backend.youtube import search_related_youtube_video
 
 DOTENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(DOTENV_PATH, override=True)
@@ -769,9 +770,17 @@ def generate_chat_response(
                     "is_knowledge_update": (chunk.get("type") == "knowledge_update")
                 })
 
+    # Search for ONE related YouTube video based on the user's question
+    related_video = None
+    try:
+        related_video = search_related_youtube_video(message)
+    except Exception as e:
+        print(f"[YouTube] Video search safely handled: {e}")
+        related_video = None
+
     # Persist in JSON Storage
     insert_message(conversation_id, "user", message, user_id=user_id)
-    insert_message(conversation_id, "assistant", answer, sources_to_cite, user_id=user_id)
+    insert_message(conversation_id, "assistant", answer, sources_to_cite, user_id=user_id, related_video=related_video)
 
     if is_new_conversation and len(message) > 40:
         short_title = message[:40].strip() + "..."
@@ -781,5 +790,6 @@ def generate_chat_response(
         "conversation_id": conversation_id,
         "answer": answer,
         "sources": sources_to_cite,
-        "is_correction_prompt": False
+        "is_correction_prompt": False,
+        "related_video": related_video
     }

@@ -2,11 +2,13 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import { Play, ExternalLink } from 'lucide-react';
 
 export default function MessageItem({ message, onSendPrompt }) {
   const isAI = message.role === 'assistant';
   const sources = message.sources || [];
   const rawContent = message.content || '';
+  const relatedVideo = message.related_video;
 
   if (!isAI) {
     // User message: Right-aligned clean light blue-gray bubble
@@ -123,7 +125,59 @@ export default function MessageItem({ message, onSendPrompt }) {
             </span>
           </div>
         ) : null}
+
+        {/* Related YouTube Video Card directly below generated answer */}
+        {relatedVideo && relatedVideo.url && (
+          <div className="related-video-box">
+            <div className="related-video-header">
+              <span className="related-video-header-title">
+                <span className="yt-icon-badge" aria-hidden="true">
+                  <svg width="15" height="11" viewBox="0 0 15 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14.5 1.7C14.3 1 13.8 0.5 13.1 0.3C11.9 0 7.5 0 7.5 0C7.5 0 3.1 0 1.9 0.3C1.2 0.5 0.7 1 0.5 1.7C0.2 2.9 0.2 5.5 0.2 5.5C0.2 5.5 0.2 8.1 0.5 9.3C0.7 10 1.2 10.5 1.9 10.7C3.1 11 7.5 11 7.5 11C7.5 11 11.9 11 13.1 10.7C13.8 10.5 14.3 10 14.5 9.3C14.8 8.1 14.8 5.5 14.8 5.5C14.8 5.5 14.8 2.9 14.5 1.7Z" fill="#FF0000"/>
+                    <path d="M6 7.8L9.8 5.5L6 3.2V7.8Z" fill="white"/>
+                  </svg>
+                </span>
+                <strong>Related YouTube Video</strong>
+              </span>
+            </div>
+
+            <a
+              href={relatedVideo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="related-video-card"
+              title={`Watch "${relatedVideo.title}" on YouTube`}
+            >
+              <div className="related-video-thumbnail-container">
+                <img
+                  src={relatedVideo.thumbnail_url}
+                  alt={relatedVideo.title}
+                  className="related-video-thumbnail"
+                  loading="lazy"
+                  onError={(e) => {
+                    if (relatedVideo.video_id && !e.target.src.includes('hqdefault')) {
+                      e.target.src = `https://i.ytimg.com/vi/${relatedVideo.video_id}/hqdefault.jpg`;
+                    }
+                  }}
+                />
+                <div className="related-video-play-overlay">
+                  <Play size={20} fill="#ffffff" color="#ffffff" />
+                </div>
+              </div>
+
+              <div className="related-video-details">
+                <span className="related-video-title">{relatedVideo.title}</span>
+                <span className="related-video-cta">
+                  <Play size={12} fill="#EF4444" color="#EF4444" />
+                  <span>Watch on YouTube</span>
+                  <ExternalLink size={12} color="#64748B" />
+                </span>
+              </div>
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

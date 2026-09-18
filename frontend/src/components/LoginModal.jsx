@@ -29,8 +29,8 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
   };
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1000 }} onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: 420, padding: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay login-modal-overlay" style={{ zIndex: 1000 }} onClick={onClose}>
+      <div className="modal-content login-modal-content" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={{
           padding: '20px 24px',

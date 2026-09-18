@@ -724,13 +724,26 @@ def insert_message(
     role: str,
     content: str,
     sources: Optional[List[Dict[str, Any]]] = None,
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None,
+    related_video: Optional[Dict[str, Any]] = None
 ) -> str:
     with _lock:
         msg_id = str(uuid.uuid4())
         now_str = datetime.utcnow().isoformat()
         convs = _read_json_file(CHAT_HISTORY_FILE)
         
+        msg_record = {
+            "id": msg_id,
+            "conversation_id": conv_id,
+            "user_id": user_id,
+            "role": role,
+            "content": content,
+            "sources": sources,
+            "created_at": now_str
+        }
+        if related_video:
+            msg_record["related_video"] = related_video
+
         found = False
         for c in convs:
             if c.get("id") == conv_id:
@@ -738,15 +751,8 @@ def insert_message(
                     c["user_id"] = user_id
                 if "messages" not in c or not isinstance(c["messages"], list):
                     c["messages"] = []
-                c["messages"].append({
-                    "id": msg_id,
-                    "conversation_id": conv_id,
-                    "user_id": user_id or c.get("user_id"),
-                    "role": role,
-                    "content": content,
-                    "sources": sources,
-                    "created_at": now_str
-                })
+                msg_record["user_id"] = user_id or c.get("user_id")
+                c["messages"].append(msg_record)
                 c["updated_at"] = now_str
                 found = True
                 break
@@ -758,15 +764,7 @@ def insert_message(
                 "title": content[:40].strip() or "New Conversation",
                 "created_at": now_str,
                 "updated_at": now_str,
-                "messages": [{
-                    "id": msg_id,
-                    "conversation_id": conv_id,
-                    "user_id": user_id,
-                    "role": role,
-                    "content": content,
-                    "sources": sources,
-                    "created_at": now_str
-                }]
+                "messages": [msg_record]
             })
             
         _write_json_file(CHAT_HISTORY_FILE, convs)
