@@ -1,9 +1,14 @@
 import os
 import re
 import json
+import html
 import urllib.request
 import urllib.parse
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+# Ensure environment variables are loaded
+load_dotenv()
 
 def clean_search_query(query: str) -> str:
     """
@@ -30,8 +35,8 @@ def search_related_youtube_video(query: str) -> Optional[Dict[str, str]]:
     Resilience:
     - Never throws an exception.
     - If search fails, times out, or returns no results, safely returns None.
-    - Supports optional YOUTUBE_API_KEY from environment, with automatic fallback
-      to direct query extraction if no key is present or if the API call fails.
+    - Uses official YouTube Data API v3 with provided API key, with automatic fallback
+      to direct query extraction if the API call fails or encounters an issue.
     """
     if not query or len(query.strip()) < 3:
         return None
@@ -42,10 +47,10 @@ def search_related_youtube_video(query: str) -> Optional[Dict[str, str]]:
         return None
 
     cleaned_q = clean_search_query(query)
-    search_term = f"{cleaned_q} heating hydronic boiler plumbing" if not any(w in cleaned_q.lower() for w in ["boiler", "radiator", "heating", "pipe", "pressure", "leak", "valve", "pump"]) else cleaned_q
+    search_term = f"{cleaned_q} heating" if not any(w in cleaned_q.lower() for w in ["boiler", "heating", "hydronic"]) else cleaned_q
 
-    # Method 1: Official YouTube Data API v3 if API key is provided
-    api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
+    # Method 1: Official YouTube Data API v3
+    api_key = os.getenv("YOUTUBE_API_KEY", "").strip() or "AIzaSyACik3kC1K0PYMU5VnCL_ZuPMUVsVY5Yqs"
     if api_key and api_key != "your_youtube_api_key_here":
         try:
             api_url = (
@@ -62,7 +67,8 @@ def search_related_youtube_video(query: str) -> Optional[Dict[str, str]]:
                     item = items[0]
                     vid = item.get("id", {}).get("videoId")
                     snippet = item.get("snippet", {})
-                    title = snippet.get("title", "")
+                    raw_title = snippet.get("title", "")
+                    title = html.unescape(raw_title).strip()
                     thumbs = snippet.get("thumbnails", {})
                     thumb_url = (
                         thumbs.get("high", {}).get("url") or
