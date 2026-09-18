@@ -9,7 +9,8 @@ export default function ChatArea({
   onSendMessage,
   onOpenKnowledge,
   onNewChat,
-  onToggleDrawer
+  onToggleDrawer,
+  isAdmin
 }) {
   const scrollContainerRef = useRef(null);
   const messagesContentRef = useRef(null);
@@ -97,14 +98,16 @@ export default function ChatArea({
             <MessageSquare size={18} color="#FFFFFF" />
           </button>
 
-          <button
-            type="button"
-            className="header-icon-btn"
-            onClick={onOpenKnowledge}
-            title="Knowledge Base"
-          >
-            <Database size={18} color="#FFFFFF" />
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="header-icon-btn"
+              onClick={onOpenKnowledge}
+              title="Knowledge Base (Admin)"
+            >
+              <Database size={18} color="#FFFFFF" />
+            </button>
+          )}
 
           <button
             type="button"
@@ -167,6 +170,7 @@ export default function ChatArea({
         onSend={onSendMessage}
         disabled={loading}
         onOpenKnowledge={onOpenKnowledge}
+        isAdmin={isAdmin}
       />
     </main>
   );

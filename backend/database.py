@@ -15,6 +15,8 @@ CHAT_HISTORY_FILE = os.path.join(DATA_DIR, "chat_history.json")
 KNOWLEDGE_UPDATES_FILE = os.path.join(DATA_DIR, "knowledge_updates.json")
 QA_HISTORY_FILE = os.path.join(DATA_DIR, "qa_history.json")
 CHUNKS_FILE = os.path.join(DATA_DIR, "chunks.json")
+USERS_FILE = os.path.join(DATA_DIR, "users.json")
+PERMISSIONS_FILE = os.path.join(DATA_DIR, "permissions.json")
 
 _lock = threading.RLock()
 
@@ -26,13 +28,20 @@ import time
 def _read_json_file(filepath: str) -> List[Dict[str, Any]]:
     if not os.path.exists(filepath):
         return []
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, list) else []
-    except Exception as e:
-        print(f"[JSON Storage] Error reading {filepath}: {e}")
-        return []
+    max_retries = 6
+    for attempt in range(max_retries):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except (PermissionError, json.JSONDecodeError, OSError):
+            if attempt == max_retries - 1:
+                return []
+            time.sleep(0.02 * (attempt + 1))
+        except Exception as e:
+            print(f"[JSON Storage] Error reading {filepath}: {e}")
+            return []
+    return []
 
 def _write_json_file(filepath: str, data: List[Dict[str, Any]]):
     tmp_path = filepath + f".tmp_{uuid.uuid4().hex}"
@@ -208,19 +217,230 @@ def _migrate_from_sqlite_if_needed():
     except Exception as e:
         print(f"[JSON Storage] Migration from SQLite skipped or failed: {e}")
 
+# --- User & Permission Management (RBAC) ---
+
+DEFAULT_USER_PERMISSIONS = {
+    "view_own_chats": True,
+    "create_chat": True,
+    "edit_own_chat": True,
+    "delete_own_chat": True,
+    "upload_documents": False,
+    "delete_documents": False,
+    "update_knowledge": False,
+    "manage_users": False,
+    "view_all_chats": False
+}
+
+ADMIN_PERMISSIONS = {
+    "view_own_chats": True,
+    "create_chat": True,
+    "edit_own_chat": True,
+    "delete_own_chat": True,
+    "upload_documents": True,
+    "delete_documents": True,
+    "update_knowledge": True,
+    "manage_users": True,
+    "view_all_chats": True
+}
+
+def get_user_permissions(user_id: str, role: str = "USER") -> Dict[str, bool]:
+    if role == "ADMIN":
+        return dict(ADMIN_PERMISSIONS)
+    
+    perms = dict(DEFAULT_USER_PERMISSIONS)
+    with _lock:
+        all_perms = _read_json_file(PERMISSIONS_FILE)
+        for p in all_perms:
+            if p.get("user_id") == user_id:
+                for k, v in p.items():
+                    if k != "user_id" and isinstance(v, bool):
+                        perms[k] = v
+                break
+    return perms
+
+def update_user_permissions(user_id: str, new_perms: Dict[str, bool]) -> Dict[str, bool]:
+    with _lock:
+        all_perms = _read_json_file(PERMISSIONS_FILE)
+        found = False
+        for p in all_perms:
+            if p.get("user_id") == user_id:
+                for k, v in new_perms.items():
+                    if k != "user_id" and isinstance(v, bool):
+                        p[k] = v
+                found = True
+                break
+        if not found:
+            entry = {"user_id": user_id}
+            for k, v in new_perms.items():
+                if k != "user_id" and isinstance(v, bool):
+                    entry[k] = v
+            all_perms.append(entry)
+        _write_json_file(PERMISSIONS_FILE, all_perms)
+
+    user = get_user_by_id(user_id)
+    role = user.get("role", "USER") if user else "USER"
+    return get_user_permissions(user_id, role)
+
+def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    with _lock:
+        users = _read_json_file(USERS_FILE)
+        for u in users:
+            if u.get("id") == user_id:
+                return dict(u)
+        return None
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    if not email:
+        return None
+    email_clean = email.lower().strip()
+    with _lock:
+        users = _read_json_file(USERS_FILE)
+        for u in users:
+            if u.get("email", "").lower().strip() == email_clean:
+                return dict(u)
+        return None
+
+def get_all_users() -> List[Dict[str, Any]]:
+    with _lock:
+        users = _read_json_file(USERS_FILE)
+        result = []
+        for u in users:
+            item = dict(u)
+            item.pop("password_hash", None)
+            item["permissions"] = get_user_permissions(u["id"], u.get("role", "USER"))
+            result.append(item)
+        return result
+
+def create_user(email: str, password: str, name: str, role: str = "USER") -> Dict[str, Any]:
+    from backend.auth import hash_password
+    with _lock:
+        existing = get_user_by_email(email)
+        if existing:
+            raise ValueError(f"User with email '{email}' already exists")
+        
+        users = _read_json_file(USERS_FILE)
+        user_id = f"user-{uuid.uuid4().hex[:8]}"
+        new_user = {
+            "id": user_id,
+            "email": email.lower().strip(),
+            "name": name.strip(),
+            "role": role.upper(),
+            "active": True,
+            "password_hash": hash_password(password),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        users.append(new_user)
+        _write_json_file(USERS_FILE, users)
+
+        out = dict(new_user)
+        out.pop("password_hash", None)
+        out["permissions"] = get_user_permissions(user_id, role.upper())
+        return out
+
+def _init_users_and_permissions():
+    from backend.auth import hash_password
+    with _lock:
+        users = _read_json_file(USERS_FILE)
+        permissions = _read_json_file(PERMISSIONS_FILE)
+        
+        # 1. Admin account initialization
+        admin_exists = any(u.get("role") == "ADMIN" for u in users)
+        admin_id = "user-admin-001"
+        if not admin_exists:
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@firebird.internal").strip().lower()
+            admin_pass = os.getenv("ADMIN_PASSWORD", "AdminSecurePass123!").strip()
+            users.append({
+                "id": admin_id,
+                "email": admin_email,
+                "name": "System Administrator",
+                "role": "ADMIN",
+                "active": True,
+                "password_hash": hash_password(admin_pass),
+                "created_at": datetime.utcnow().isoformat()
+            })
+            print(f"[JSON Storage] Seeded initial ADMIN user: {admin_email}")
+        else:
+            for u in users:
+                if u.get("role") == "ADMIN":
+                    admin_id = u.get("id", admin_id)
+                    break
+
+        # 2. Seed required test accounts if not already present
+        existing_emails = {u.get("email", "").lower() for u in users}
+        if "usera@firebird.internal" not in existing_emails:
+            users.append({
+                "id": "user-a-001",
+                "email": "usera@firebird.internal",
+                "name": "User A",
+                "role": "USER",
+                "active": True,
+                "password_hash": hash_password("UserA123!"),
+                "created_at": datetime.utcnow().isoformat()
+            })
+        if "userb@firebird.internal" not in existing_emails:
+            users.append({
+                "id": "user-b-002",
+                "email": "userb@firebird.internal",
+                "name": "User B",
+                "role": "USER",
+                "active": True,
+                "password_hash": hash_password("UserB123!"),
+                "created_at": datetime.utcnow().isoformat()
+            })
+        if "ganesh@firebird.internal" not in existing_emails:
+            users.append({
+                "id": "user-ganesh-003",
+                "email": "ganesh@firebird.internal",
+                "name": "Ganesh",
+                "role": "USER",
+                "active": True,
+                "password_hash": hash_password("Ganesh123!"),
+                "created_at": datetime.utcnow().isoformat()
+            })
+
+        _write_json_file(USERS_FILE, users)
+
+        # 3. Ensure Ganesh has specific permission overrides in permissions.json
+        ganesh_perm_exists = any(p.get("user_id") == "user-ganesh-003" for p in permissions)
+        if not ganesh_perm_exists:
+            permissions.append({
+                "user_id": "user-ganesh-003",
+                "upload_documents": True,
+                "delete_documents": False,
+                "update_knowledge": True
+            })
+            _write_json_file(PERMISSIONS_FILE, permissions)
+
+        # 4. Migrate any legacy conversations without user_id to admin
+        convs = _read_json_file(CHAT_HISTORY_FILE)
+        convs_updated = False
+        for c in convs:
+            if not c.get("user_id"):
+                c["user_id"] = admin_id
+                convs_updated = True
+            for m in c.get("messages", []):
+                if not m.get("user_id"):
+                    m["user_id"] = c["user_id"]
+                    convs_updated = True
+        if convs_updated:
+            _write_json_file(CHAT_HISTORY_FILE, convs)
+            print("[JSON Storage] Migrated legacy conversations without user_id to admin.")
+
 def init_db():
     """
     Initializes JSON file storage. Creates documents.json, chat_history.json,
-    knowledge_updates.json, qa_history.json, and chunks.json if they do not exist.
+    knowledge_updates.json, qa_history.json, chunks.json, users.json, and permissions.json
+    if they do not exist.
     """
     with _lock:
         os.makedirs(DATA_DIR, exist_ok=True)
-        for filepath in [DOCUMENTS_FILE, CHAT_HISTORY_FILE, KNOWLEDGE_UPDATES_FILE, QA_HISTORY_FILE, CHUNKS_FILE]:
+        for filepath in [DOCUMENTS_FILE, CHAT_HISTORY_FILE, KNOWLEDGE_UPDATES_FILE, QA_HISTORY_FILE, CHUNKS_FILE, USERS_FILE, PERMISSIONS_FILE]:
             if not os.path.exists(filepath):
                 _write_json_file(filepath, [])
 
         # Check for one-time migration if files are empty
         _migrate_from_sqlite_if_needed()
+        _init_users_and_permissions()
         print("[JSON Storage] JSON file storage initialized successfully.")
 
 
@@ -406,13 +626,16 @@ def delete_qa_pair(qa_id: str) -> bool:
 
 # --- Conversation & Message Operations ---
 
-def create_conversation(title: str = "New Conversation") -> str:
+def create_conversation(title: str = "New Conversation", user_id: Optional[str] = None, session_id: Optional[str] = None) -> str:
     with _lock:
         conv_id = str(uuid.uuid4())
         convs = _read_json_file(CHAT_HISTORY_FILE)
         now_str = datetime.utcnow().isoformat()
+        owner_id = session_id or user_id
         convs.append({
             "id": conv_id,
+            "user_id": owner_id,
+            "session_id": owner_id,
             "title": title,
             "created_at": now_str,
             "updated_at": now_str,
@@ -421,24 +644,39 @@ def create_conversation(title: str = "New Conversation") -> str:
         _write_json_file(CHAT_HISTORY_FILE, convs)
         return conv_id
 
-def get_all_conversations() -> List[Dict[str, Any]]:
+def get_all_conversations(user_id: Optional[str] = None, session_id: Optional[str] = None, is_admin: bool = False, view_all: bool = False) -> List[Dict[str, Any]]:
     with _lock:
         convs = _read_json_file(CHAT_HISTORY_FILE)
+        owner_id = session_id or user_id
+        if not (is_admin or view_all):
+            if owner_id:
+                convs = [c for c in convs if c.get("session_id") == owner_id or c.get("user_id") == owner_id]
+            else:
+                convs = []
         convs.sort(key=lambda x: x.get("updated_at") or x.get("created_at") or "", reverse=True)
         return [{
             "id": c["id"],
+            "user_id": c.get("user_id") or c.get("session_id"),
+            "session_id": c.get("session_id") or c.get("user_id"),
             "title": c["title"],
             "created_at": c.get("created_at"),
             "updated_at": c.get("updated_at")
         } for c in convs]
 
-def get_conversation(conv_id: str) -> Optional[Dict[str, Any]]:
+def get_conversation(conv_id: str, user_id: Optional[str] = None, session_id: Optional[str] = None, is_admin: bool = False, view_all: bool = False) -> Optional[Dict[str, Any]]:
     with _lock:
         convs = _read_json_file(CHAT_HISTORY_FILE)
+        owner_id = session_id or user_id
         for c in convs:
             if c.get("id") == conv_id:
+                if owner_id is not None and not (is_admin or view_all):
+                    c_owner = c.get("session_id") or c.get("user_id")
+                    if c_owner != owner_id:
+                        return None
                 return {
                     "id": c["id"],
+                    "user_id": c.get("user_id") or c.get("session_id"),
+                    "session_id": c.get("session_id") or c.get("user_id"),
                     "title": c["title"],
                     "created_at": c.get("created_at"),
                     "updated_at": c.get("updated_at"),
@@ -446,27 +684,48 @@ def get_conversation(conv_id: str) -> Optional[Dict[str, Any]]:
                 }
         return None
 
-def update_conversation_title(conv_id: str, title: str):
+def update_conversation_title(conv_id: str, title: str, user_id: Optional[str] = None, session_id: Optional[str] = None, is_admin: bool = False) -> bool:
     with _lock:
         convs = _read_json_file(CHAT_HISTORY_FILE)
+        owner_id = session_id or user_id
         for c in convs:
             if c.get("id") == conv_id:
+                if not is_admin:
+                    c_owner = c.get("session_id") or c.get("user_id")
+                    if not owner_id or c_owner != owner_id:
+                        return False
                 c["title"] = title
                 c["updated_at"] = datetime.utcnow().isoformat()
-                break
-        _write_json_file(CHAT_HISTORY_FILE, convs)
+                _write_json_file(CHAT_HISTORY_FILE, convs)
+                return True
+        return False
 
-def delete_conversation(conv_id: str) -> bool:
+def delete_conversation(conv_id: str, user_id: Optional[str] = None, session_id: Optional[str] = None, is_admin: bool = False) -> bool:
     with _lock:
         convs = _read_json_file(CHAT_HISTORY_FILE)
-        initial_len = len(convs)
-        convs = [c for c in convs if c.get("id") != conv_id]
-        if len(convs) == initial_len:
+        owner_id = session_id or user_id
+        target = None
+        for c in convs:
+            if c.get("id") == conv_id:
+                target = c
+                break
+        if not target:
             return False
+        if not is_admin:
+            c_owner = target.get("session_id") or target.get("user_id")
+            if not owner_id or c_owner != owner_id:
+                return False
+        convs = [c for c in convs if c.get("id") != conv_id]
         _write_json_file(CHAT_HISTORY_FILE, convs)
         return True
 
-def insert_message(conv_id: str, role: str, content: str, sources: Optional[List[Dict[str, Any]]] = None) -> str:
+def insert_message(
+    conv_id: str,
+    role: str,
+    content: str,
+    sources: Optional[List[Dict[str, Any]]] = None,
+    user_id: Optional[str] = None
+) -> str:
     with _lock:
         msg_id = str(uuid.uuid4())
         now_str = datetime.utcnow().isoformat()
@@ -475,11 +734,14 @@ def insert_message(conv_id: str, role: str, content: str, sources: Optional[List
         found = False
         for c in convs:
             if c.get("id") == conv_id:
+                if user_id and not c.get("user_id"):
+                    c["user_id"] = user_id
                 if "messages" not in c or not isinstance(c["messages"], list):
                     c["messages"] = []
                 c["messages"].append({
                     "id": msg_id,
                     "conversation_id": conv_id,
+                    "user_id": user_id or c.get("user_id"),
                     "role": role,
                     "content": content,
                     "sources": sources,
@@ -492,12 +754,14 @@ def insert_message(conv_id: str, role: str, content: str, sources: Optional[List
         if not found:
             convs.append({
                 "id": conv_id,
+                "user_id": user_id,
                 "title": content[:40].strip() or "New Conversation",
                 "created_at": now_str,
                 "updated_at": now_str,
                 "messages": [{
                     "id": msg_id,
                     "conversation_id": conv_id,
+                    "user_id": user_id,
                     "role": role,
                     "content": content,
                     "sources": sources,

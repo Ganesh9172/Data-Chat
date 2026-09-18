@@ -3,6 +3,7 @@ import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 from backend.database import (
     create_conversation,
@@ -416,21 +417,37 @@ def synthesize_professional_fallback(message: str, retrieved_chunks: List[Dict[s
 def generate_chat_response(
     message: str,
     conversation_id: Optional[str] = None,
-    report_context: Optional[PowerBIReportContext] = None
+    report_context: Optional[PowerBIReportContext] = None,
+    user_id: Optional[str] = None,
+    user_permissions: Optional[Dict[str, bool]] = None,
+    is_admin: bool = False
 ) -> Dict[str, Any]:
     load_dotenv(DOTENV_PATH, override=True)
 
-    # 1. Manage Conversation Session
+    if not is_admin and user_id is None and user_permissions is None:
+        is_admin = True
+
+    can_update_knowledge = is_admin or (user_permissions and user_permissions.get("update_knowledge", False))
+
+    # 1. Manage Conversation Session & Ownership Verification
     conv = None
     if conversation_id:
         conv = get_conversation(conversation_id)
+        if conv:
+            conv_owner = conv.get("session_id") or conv.get("user_id")
+            if not is_admin and not (user_permissions and user_permissions.get("view_all_chats")):
+                if conv_owner and user_id and conv_owner != user_id:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Forbidden: You do not have access to this conversation"
+                    )
         
     is_new_conversation = False
     if not conv:
         is_new_conversation = True
         title = message[:40].strip() + ("..." if len(message) > 40 else "")
-        conversation_id = create_conversation(title=title)
-        conv = {"id": conversation_id, "title": title, "messages": []}
+        conversation_id = create_conversation(title=title, user_id=user_id, session_id=user_id)
+        conv = {"id": conversation_id, "user_id": user_id, "session_id": user_id, "title": title, "messages": []}
 
     history = conv.get("messages", [])
     msg_clean = message.strip()
@@ -449,13 +466,24 @@ def generate_chat_response(
         # Affirmative Confirmation
         affirmative_words = {"yes", "confirm", "yep", "save it", "save", "do it", "approved", "ok save", "sure", "please save", "yes please", "yes save it"}
         if cleaned_tok in affirmative_words or any(cleaned_tok == w for w in affirmative_words):
+            if not can_update_knowledge:
+                answer = "You do not have permission to modify or update the knowledge base. Please contact an administrator."
+                insert_message(conversation_id, "user", message, user_id=user_id)
+                insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+                return {
+                    "conversation_id": conversation_id,
+                    "answer": answer,
+                    "sources": [],
+                    "is_correction_prompt": False
+                }
+
             emb = vector_to_bytes(get_embedding(
                 f"{pending_update['original_information']} {pending_update['corrected_information']}"
             ))
             approve_knowledge_update(pending_update["id"], embedding=emb)
             answer = "Done. The correction has been saved."
-            insert_message(conversation_id, "user", message)
-            insert_message(conversation_id, "assistant", answer, [])
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
@@ -468,8 +496,8 @@ def generate_chat_response(
         if cleaned_tok in negative_words or any(cleaned_tok == w for w in negative_words):
             reject_knowledge_update(pending_update["id"])
             answer = "Understood. The correction has been cancelled and was not saved."
-            insert_message(conversation_id, "user", message)
-            insert_message(conversation_id, "assistant", answer, [])
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
@@ -479,6 +507,17 @@ def generate_chat_response(
 
     # --- INTENT: REVERT UPDATE ---
     if any(phrase in msg_lower for phrase in ["revert update", "revert correction", "revert the last update", "revert knowledge update"]):
+        if not can_update_knowledge:
+            answer = "You do not have permission to revert knowledge base updates. Please contact an administrator."
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False
+            }
+
         active_updates = get_active_knowledge_updates()
         if active_updates:
             latest_update = active_updates[-1]
@@ -486,8 +525,8 @@ def generate_chat_response(
             answer = f"Done. Knowledge base update #{latest_update.get('update_number', 1)} has been reverted. The original PDF information is now active again."
         else:
             answer = "There are no active knowledge updates to revert."
-        insert_message(conversation_id, "user", message)
-        insert_message(conversation_id, "assistant", answer, [])
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
         return {
             "conversation_id": conversation_id,
             "answer": answer,
@@ -502,6 +541,17 @@ def generate_chat_response(
         "what should the correct value be" in last_assistant_msg.lower()
     )
     if was_prompted_for_info:
+        if not can_update_knowledge:
+            answer = "You do not have permission to modify the knowledge base. Only administrators or users with update_knowledge permission can submit corrections."
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False
+            }
+
         provided_val = extract_value_from_text(msg_clean) or msg_clean
         # Ensure unit if user just gave numbers
         if re.search(r"[0-9]", provided_val) and "bar" not in provided_val.lower() and "°c" not in provided_val.lower():
@@ -521,8 +571,8 @@ def generate_chat_response(
             f"I understand. You want to update the pressure range to {provided_val}.\n\n"
             f"Should I save this correction to the knowledge base?"
         )
-        insert_message(conversation_id, "user", message)
-        insert_message(conversation_id, "assistant", answer, [])
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
         return {
             "conversation_id": conversation_id,
             "answer": answer,
@@ -534,6 +584,17 @@ def generate_chat_response(
     # --- INTENT C / D: EXPLICIT KNOWLEDGE CORRECTION OR UPDATE ---
     correction_eval = check_explicit_correction(message)
     if correction_eval["is_correction"]:
+        if not can_update_knowledge:
+            answer = "You do not have permission to modify the knowledge base. Only administrators or users with update_knowledge permission can submit corrections."
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False
+            }
+
         if not correction_eval["has_value"]:
             # User pointed out an error but did NOT provide the corrected value.
             # RULE: NEVER invent a value! Ask for the correct information naturally.
@@ -542,8 +603,8 @@ def generate_chat_response(
             else:
                 answer = "I can update the knowledge base, but I need the correct information first. What should the correct value or information be?"
 
-            insert_message(conversation_id, "user", message)
-            insert_message(conversation_id, "assistant", answer, [])
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
@@ -570,8 +631,8 @@ def generate_chat_response(
                 f"I understand. You want to update the pressure range to {corrected_val}.\n\n"
                 f"Should I save this correction to the knowledge base?"
             )
-            insert_message(conversation_id, "user", message)
-            insert_message(conversation_id, "assistant", answer, [])
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
@@ -583,8 +644,8 @@ def generate_chat_response(
     # --- INTENT A: NORMAL CONVERSATION (Greetings, thanks, well-being, polite chat) ---
     normal_reply = check_normal_conversation(message)
     if normal_reply:
-        insert_message(conversation_id, "user", message)
-        insert_message(conversation_id, "assistant", normal_reply, [])
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", normal_reply, [], user_id=user_id)
         return {
             "conversation_id": conversation_id,
             "answer": normal_reply,
@@ -708,9 +769,9 @@ def generate_chat_response(
                     "is_knowledge_update": (chunk.get("type") == "knowledge_update")
                 })
 
-    # Persist in SQL Server
-    insert_message(conversation_id, "user", message)
-    insert_message(conversation_id, "assistant", answer, sources_to_cite)
+    # Persist in JSON Storage
+    insert_message(conversation_id, "user", message, user_id=user_id)
+    insert_message(conversation_id, "assistant", answer, sources_to_cite, user_id=user_id)
 
     if is_new_conversation and len(message) > 40:
         short_title = message[:40].strip() + "..."

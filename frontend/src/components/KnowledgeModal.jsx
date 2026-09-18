@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { X, UploadCloud, FileText, HelpCircle, Database, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { getKnowledgeBase, uploadKnowledgeDocument, addQAPair, deleteKnowledgeItem, revertKnowledgeUpdate } from '../services/api';
 
-export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) {
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'qa' | 'browser'
+export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated, isAdmin = true }) {
+  const canUpload = !!isAdmin;
+  const canDeleteDoc = !!isAdmin;
+  const canUpdateKnowledge = !!isAdmin;
+
+  const [activeTab, setActiveTab] = useState(canUpload ? 'upload' : 'browser');
   const [knowledgeData, setKnowledgeData] = useState({ documents: [], qa_pairs: [], knowledge_updates: [], stats: {} });
   const [isUploading, setIsUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
@@ -26,8 +30,13 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
     if (isOpen) {
       loadData();
       setStatusMessage(null);
+      if (!canUpload && activeTab === 'upload') {
+        setActiveTab('browser');
+      } else if (!canUpdateKnowledge && activeTab === 'qa') {
+        setActiveTab('browser');
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, canUpload, canUpdateKnowledge]);
 
   if (!isOpen) return null;
 
@@ -116,18 +125,22 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
 
         {/* Tabs */}
         <div className="modal-tabs">
-          <button
-            className={`modal-tab ${activeTab === 'upload' ? 'active' : ''}`}
-            onClick={() => setActiveTab('upload')}
-          >
-            Upload Documents
-          </button>
-          <button
-            className={`modal-tab ${activeTab === 'qa' ? 'active' : ''}`}
-            onClick={() => setActiveTab('qa')}
-          >
-            Add Approved Q&A
-          </button>
+          {canUpload && (
+            <button
+              className={`modal-tab ${activeTab === 'upload' ? 'active' : ''}`}
+              onClick={() => setActiveTab('upload')}
+            >
+              Upload Documents
+            </button>
+          )}
+          {canUpdateKnowledge && (
+            <button
+              className={`modal-tab ${activeTab === 'qa' ? 'active' : ''}`}
+              onClick={() => setActiveTab('qa')}
+            >
+              Add Approved Q&A
+            </button>
+          )}
           <button
             className={`modal-tab ${activeTab === 'browser' ? 'active' : ''}`}
             onClick={() => setActiveTab('browser')}
@@ -157,11 +170,11 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
 
         {/* Modal Body */}
         <div className="modal-body">
-          {activeTab === 'upload' && (
+          {activeTab === 'upload' && canUpload && (
             <div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: 16 }}>
                 Upload PDF files, technical manuals, Standard Operating Procedures (SOP), or business documents.
-                Firebird AI automatically extracts, chunks, generates vector embeddings, and stores them in SQLite.
+                Firebird AI automatically extracts, chunks, generates vector embeddings, and stores them in JSON storage.
               </p>
 
               <label className="dropzone">
@@ -190,13 +203,13 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                   ⚡ Zero-Restart Automatic Indexing
                 </h5>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  As soon as processing completes, the knowledge base is updated in real time. You can ask questions immediately without restarting the backend or retraining any model.
+                  As soon as processing completes, the centralized knowledge base is updated in real time. All authorized users can immediately ask questions about newly indexed documents.
                 </p>
               </div>
             </div>
           )}
 
-          {activeTab === 'qa' && (
+          {activeTab === 'qa' && canUpdateKnowledge && (
             <form onSubmit={handleAddQA} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
                 Add verified Q&A pairs directly into Firebird AI's knowledge base.
@@ -260,7 +273,7 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                           <th>Type</th>
                           <th>Chunks</th>
                           <th>Date</th>
-                          <th>Action</th>
+                          {canDeleteDoc && <th>Action</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -270,15 +283,17 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                             <td><span className="badge">{doc.file_type.toUpperCase()}</span></td>
                             <td>{doc.chunk_count}</td>
                             <td>{new Date(doc.created_at).toLocaleDateString()}</td>
-                            <td>
-                              <button
-                                className="delete-action-btn"
-                                onClick={() => handleDelete(doc.id, doc.name)}
-                                title="Delete document"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
+                            {canDeleteDoc && (
+                              <td>
+                                <button
+                                  className="delete-action-btn"
+                                  onClick={() => handleDelete(doc.id, doc.name)}
+                                  title="Delete document"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -304,7 +319,7 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                           <th>Corrected Information</th>
                           <th>Status</th>
                           <th>Original Source</th>
-                          <th>Action</th>
+                          {canUpdateKnowledge && <th>Action</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -330,26 +345,28 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                             <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                               {ku.source_document ? `${ku.source_document}, P${ku.source_page || 1}` : 'Field note'}
                             </td>
-                            <td>
-                              {ku.status === 'approved' ? (
-                                <button
-                                  className="delete-action-btn"
-                                  onClick={() => handleRevertUpdate(ku.id, ku.update_number || 1)}
-                                  title="Revert update"
-                                  style={{ color: '#f59e0b' }}
-                                >
-                                  <RefreshCw size={14} />
-                                </button>
-                              ) : (
-                                <button
-                                  className="delete-action-btn"
-                                  onClick={() => handleDelete(ku.id, `Update #${ku.update_number || 1}`)}
-                                  title="Delete update"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </td>
+                            {canUpdateKnowledge && (
+                              <td>
+                                {ku.status === 'approved' ? (
+                                  <button
+                                    className="delete-action-btn"
+                                    onClick={() => handleRevertUpdate(ku.id, ku.update_number || 1)}
+                                    title="Revert update"
+                                    style={{ color: '#f59e0b' }}
+                                  >
+                                    <RefreshCw size={14} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="delete-action-btn"
+                                    onClick={() => handleDelete(ku.id, `Update #${ku.update_number || 1}`)}
+                                    title="Delete update"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -373,7 +390,7 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                           <th>Question</th>
                           <th>Answer Preview</th>
                           <th>Source</th>
-                          <th>Action</th>
+                          {(canUpdateKnowledge || canDeleteDoc) && <th>Action</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -386,15 +403,17 @@ export default function KnowledgeModal({ isOpen, onClose, onKnowledgeUpdated }) 
                               {qa.answer}
                             </td>
                             <td><span className="badge" style={{ borderColor: '#facc15', color: '#facc15' }}>{qa.source}</span></td>
-                            <td>
-                              <button
-                                className="delete-action-btn"
-                                onClick={() => handleDelete(qa.id, qa.question)}
-                                title="Delete Q&A"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
+                            {(canUpdateKnowledge || canDeleteDoc) && (
+                              <td>
+                                <button
+                                  className="delete-action-btn"
+                                  onClick={() => handleDelete(qa.id, qa.question)}
+                                  title="Delete Q&A"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

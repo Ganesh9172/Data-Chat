@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import KnowledgeModal from './components/KnowledgeModal';
+import LoginModal from './components/LoginModal';
 import {
   getChats,
   getChat,
   deleteChat,
   sendChatMessage,
   getKnowledgeBase,
-  checkHealth
+  checkHealth,
+  checkAdmin,
+  adminLogout,
+  getSessionId
 } from './services/api';
 
 const PRESET_CONVERSATIONS = {
@@ -74,6 +78,7 @@ First check: confirm that the gauge is showing system-water pressure rather than
 };
 
 export default function App() {
+  const [isAdmin, setIsAdmin] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [activeChatId, setActiveChatId] = useState('default-1');
   const [currentConversation, setCurrentConversation] = useState(PRESET_CONVERSATIONS['default-1']);
@@ -85,6 +90,7 @@ export default function App() {
   // Drawer & Modals
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const showToast = (text) => {
     setToast(text);
@@ -103,19 +109,55 @@ export default function App() {
   const loadStats = async () => {
     try {
       const kb = await getKnowledgeBase();
-      setStats(kb.stats || { documents: 6, chunks: 29, qa_pairs: 0 });
+      if (kb?.stats) {
+        setStats(kb.stats);
+      }
     } catch (e) {
       console.error('Failed to load stats:', e);
     }
   };
 
-  useEffect(() => {
+  const initApp = async () => {
+    // Ensure session ID is initialized for client
+    getSessionId();
+
+    // Check if user already holds a valid admin session
+    try {
+      const adminData = await checkAdmin();
+      if (adminData && adminData.role === 'ADMIN') {
+        setIsAdmin(true);
+        loadStats();
+      }
+    } catch {
+      setIsAdmin(false);
+    }
+
+    // Load visitor's conversations & verify health
     loadConversations();
-    loadStats();
     checkHealth().catch((e) => {
       console.warn('Backend service offline or starting:', e);
     });
+  };
+
+  useEffect(() => {
+    initApp();
   }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAdmin(true);
+    setIsLoginOpen(false);
+    showToast('Administrator mode unlocked');
+    loadConversations();
+    loadStats();
+  };
+
+  const handleLogout = () => {
+    adminLogout();
+    setIsAdmin(false);
+    setIsKnowledgeOpen(false);
+    showToast('Administrator signed out');
+    loadConversations();
+  };
 
   const handleSelectChat = async (id) => {
     setActiveChatId(id);
@@ -180,7 +222,7 @@ export default function App() {
     try {
       const convIdForBackend = activeChatId && !activeChatId.startsWith('default-') ? activeChatId : null;
       const response = await sendChatMessage(text, convIdForBackend);
-      
+
       const aiMsg = {
         id: 'ai-' + Date.now(),
         role: 'assistant',
@@ -226,6 +268,9 @@ export default function App() {
         onDeleteChat={handleDeleteChat}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         stats={stats}
+        isAdmin={isAdmin}
+        onLogout={handleLogout}
+        onOpenLogin={() => setIsLoginOpen(true)}
       />
 
       {/* Main Chat Interface */}
@@ -236,16 +281,25 @@ export default function App() {
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onNewChat={handleNewChat}
         onToggleDrawer={() => setIsDrawerOpen((prev) => !prev)}
+        isAdmin={isAdmin}
       />
 
-      {/* Knowledge Base Modal */}
+      {/* Knowledge Base Modal (Admin Only) */}
       <KnowledgeModal
-        isOpen={isKnowledgeOpen}
+        isOpen={isKnowledgeOpen && isAdmin}
         onClose={() => setIsKnowledgeOpen(false)}
         onKnowledgeUpdated={loadStats}
+        isAdmin={isAdmin}
       />
 
-      {/* Clean Toast Notification */}
+      {/* Admin Authentication Modal */}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* Toast Notification */}
       {toast && (
         <div className="toast-notification">
           {toast}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowUp, Paperclip, Mic } from 'lucide-react';
 import { useSpeechRecognition, DEFAULT_SPEECH_LANG } from '../hooks/useSpeechRecognition';
 
-export default function ChatInput({ onSend, disabled, onOpenKnowledge }) {
+export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }) {
   const [text, setText] = useState('');
   const textareaRef = useRef(null);
   const baseTextRef = useRef('');
@@ -130,14 +130,16 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge }) {
         />
 
         <div className="chat-input-actions">
-          <button
-            type="button"
-            className="input-action-btn attach-btn"
-            onClick={onOpenKnowledge}
-            title="Knowledge Base / Documents"
-          >
-            <Paperclip size={18} />
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="input-action-btn attach-btn"
+              onClick={onOpenKnowledge}
+              title="Upload Document / Knowledge Base (Admin)"
+            >
+              <Paperclip size={18} />
+            </button>
+          )}
 
           <button
             type="button"

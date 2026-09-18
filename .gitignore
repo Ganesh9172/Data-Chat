@@ -15,6 +15,15 @@ ENV/
 *.sqlite
 *.sqlite3
 data/*.tmp*
+data/chat_history.json
+data/knowledge_updates.json
+data/permissions.json
+data/users.json
+data/chunks.json
+data/qa_history.json
+data/documents.json
+
+
 
 # Node / Vite
 node_modules/

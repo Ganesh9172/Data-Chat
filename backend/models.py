@@ -40,10 +40,50 @@ class ConversationCreateRequest(BaseModel):
 
 class ConversationResponse(BaseModel):
     id: str
+    user_id: Optional[str] = None
     title: str
     created_at: str
     updated_at: str
     messages: Optional[List[Dict[str, Any]]] = []
+
+class LoginRequest(BaseModel):
+    password: str = Field(..., min_length=1)
+    email: Optional[str] = None
+    username: Optional[str] = None
+
+class AdminLoginRequest(BaseModel):
+    password: str = Field(..., min_length=1)
+    username: Optional[str] = None
+
+class AdminLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str = "ADMIN"
+    name: Optional[str] = "System Administrator"
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str
+    active: bool
+    created_at: Optional[str] = None
+    permissions: Dict[str, bool] = {}
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: Optional[str] = "ADMIN"
+    user: Optional[Dict[str, Any]] = None
+
+class UserCreateRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+    password: str = Field(..., min_length=4)
+    name: str = Field(..., min_length=1)
+    role: Optional[str] = "USER"
+
+class PermissionsUpdateRequest(BaseModel):
+    permissions: Dict[str, bool]
 
 class KnowledgeUpdateCreateRequest(BaseModel):
     original_information: str = Field(..., min_length=1)
