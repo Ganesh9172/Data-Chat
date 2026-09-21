@@ -54,13 +54,15 @@ from backend.knowledge import (
     process_pdf_file,
     process_text_content,
     process_qa_entry,
-    KNOWLEDGE_DATA_DIR
+    KNOWLEDGE_DATA_DIR,
+    init_knowledge_base
 )
 from backend.chat import generate_chat_response
 from backend.embeddings import get_embedding, vector_to_bytes
 
-# Initialize JSON file storage
+# Initialize JSON file storage and runtime knowledge documents
 init_db()
+init_knowledge_base()
 
 app = FastAPI(
     title="Firebird AI Backend",

@@ -7,17 +7,12 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 # Path Configuration for JSON Data Storage
-# Railway: set DATA_DIR=/app/data
-# Local development: automatically uses the project's data folder.
-
 DATA_DIR = os.getenv("DATA_DIR")
-
 if not DATA_DIR:
     DATA_DIR = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "data"
     )
-
 os.makedirs(DATA_DIR, exist_ok=True)
 
 DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.json")

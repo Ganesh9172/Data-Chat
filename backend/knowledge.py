@@ -1,4 +1,5 @@
 import os
+import shutil
 import uuid
 import re
 import glob
@@ -21,13 +22,11 @@ from backend.embeddings import (
     vector_to_bytes
 )
 
-DATA_DIR = os.getenv("DATA_DIR")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+DATA_DIR = os.getenv("DATA_DIR")
 if not DATA_DIR:
-    DATA_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data"
-    )
+    DATA_DIR = os.path.join(REPO_ROOT, "data")
 
 KNOWLEDGE_DATA_DIR = os.path.join(DATA_DIR, "knowledge")
 
@@ -261,3 +260,80 @@ def sync_official_knowledge_base():
         print(f"[Knowledge Sync] Indexed {fname}: {res['chunk_count']} chunks")
         
     return results
+
+def get_bundled_knowledge_dir() -> Optional[str]:
+    """
+    Locates the bundled knowledge directory containing the repository's source PDFs.
+    Checks environment variable, bundled image directory, and repository data directory.
+    """
+    candidate_dirs = []
+    env_bundled = os.getenv("BUNDLED_DATA_DIR")
+    if env_bundled:
+        candidate_dirs.extend([
+            os.path.join(env_bundled, "knowledge"),
+            env_bundled
+        ])
+    candidate_dirs.extend([
+        os.path.join(REPO_ROOT, "bundled_data", "knowledge"),
+        os.path.join(REPO_ROOT, "bundled_data"),
+        os.path.join(REPO_ROOT, "bundled_knowledge"),
+        os.path.join(REPO_ROOT, "data", "knowledge"),
+    ])
+    for c in candidate_dirs:
+        if os.path.isdir(c) and glob.glob(os.path.join(c, "*.pdf")):
+            return c
+    return None
+
+def init_knowledge_base():
+    """
+    Idempotent startup initialization:
+    1. Detects bundled knowledge PDFs already present in the repository.
+    2. Detects runtime data/knowledge/ directory.
+    3. Copies missing bundled PDFs into runtime knowledge directory if missing.
+    4. Checks existing document index via get_all_documents().
+    5. Indexes only documents missing from the index using process_pdf_file().
+    Never clears existing data, overwrites files, or deletes user uploads.
+    """
+    print(f"[Knowledge Init] Data directory: {DATA_DIR}")
+    
+    bundled_dir = get_bundled_knowledge_dir()
+    if bundled_dir:
+        bundled_pdfs = sorted(glob.glob(os.path.join(bundled_dir, "*.pdf")))
+        print(f"[Knowledge Init] Bundled knowledge directory: {bundled_dir}")
+        print(f"[Knowledge Init] Found {len(bundled_pdfs)} bundled documents.")
+        
+        # Copy missing bundled files to runtime knowledge directory
+        if os.path.abspath(bundled_dir) != os.path.abspath(KNOWLEDGE_DATA_DIR):
+            for item in os.listdir(bundled_dir):
+                src_path = os.path.join(bundled_dir, item)
+                if os.path.isfile(src_path):
+                    dest_path = os.path.join(KNOWLEDGE_DATA_DIR, item)
+                    if not os.path.exists(dest_path):
+                        shutil.copy2(src_path, dest_path)
+    else:
+        print("[Knowledge Init] Bundled knowledge directory: None found")
+        print("[Knowledge Init] Found 0 bundled documents.")
+
+    runtime_pdfs = sorted(glob.glob(os.path.join(KNOWLEDGE_DATA_DIR, "*.pdf")))
+    print(f"[Knowledge Init] Found {len(runtime_pdfs)} runtime documents.")
+
+    # Check which documents are already indexed
+    existing_docs = get_all_documents()
+    indexed_filenames = {
+        (d.get("filename") or d.get("name") or "").strip()
+        for d in existing_docs
+        if (d.get("chunk_count") or 0) > 0
+    }
+
+    for pdf_path in runtime_pdfs:
+        filename = os.path.basename(pdf_path)
+        if filename in indexed_filenames:
+            print(f"[Knowledge Init] Skipping already indexed document: {filename}")
+        else:
+            print(f"[Knowledge Init] Indexing missing document: {filename}")
+            try:
+                process_pdf_file(pdf_path, filename)
+            except Exception as e:
+                print(f"[Knowledge Init] Error indexing {filename}: {e}")
+
+    print("[Knowledge Init] Knowledge initialization completed.")
