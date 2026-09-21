@@ -1,0 +1,50 @@
+[
+  {
+    "id": "gen_greeting",
+    "category": "general_questions",
+    "question": "Hello",
+    "expected_meaning": "Friendly greeting and offer to assist with heating system."
+  },
+  {
+    "id": "gen_identity",
+    "category": "general_questions",
+    "question": "What is your name?",
+    "expected_meaning": "Identifies as Firebird AI, technical assistant for heating and plumbing."
+  },
+  {
+    "id": "gen_who_are_you",
+    "category": "general_questions",
+    "question": "Who are you?",
+    "expected_meaning": "Identifies as Firebird AI, technical assistant for heating and plumbing."
+  },
+  {
+    "id": "gen_capabilities",
+    "category": "general_questions",
+    "question": "How can you help me?",
+    "expected_meaning": "Explains assistance with heating diagnostics, fault codes, pressures, and plumbing."
+  },
+  {
+    "id": "gen_date_today",
+    "category": "general_questions",
+    "question": "What is the date today?",
+    "expected_meaning": "Direct answer with current date using server/system clock."
+  },
+  {
+    "id": "gen_day_today",
+    "category": "general_questions",
+    "question": "What day is today?",
+    "expected_meaning": "Direct answer with current day of the week."
+  },
+  {
+    "id": "gen_what_is_ai",
+    "category": "general_questions",
+    "question": "What is AI?",
+    "expected_meaning": "Explains Artificial Intelligence conversationally without document refusal."
+  },
+  {
+    "id": "gen_what_is_rag",
+    "category": "general_questions",
+    "question": "What is RAG?",
+    "expected_meaning": "Explains Retrieval-Augmented Generation conversationally without document refusal."
+  }
+]

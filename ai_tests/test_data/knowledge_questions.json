@@ -1,0 +1,26 @@
+[
+  {
+    "id": "kb_cold_pressure",
+    "category": "knowledge",
+    "question": "What is normal cold pressure?",
+    "expected_meaning": "The typical cold fill pressure is approximately 1.0 to 1.5 bar."
+  },
+  {
+    "id": "kb_fault_code_f32",
+    "category": "knowledge",
+    "question": "What is F32?",
+    "expected_meaning": "F32 indicates insufficient circulation detected in the heating system."
+  },
+  {
+    "id": "kb_low_pressure_causes",
+    "category": "knowledge",
+    "question": "What causes low water pressure?",
+    "expected_meaning": "Low pressure can be caused by visible leaks, relief discharge, bleeding radiators without topping up, or expansion vessel loss."
+  },
+  {
+    "id": "kb_air_noise",
+    "category": "knowledge",
+    "question": "What causes air noise inside a hydronic heating system?",
+    "expected_meaning": "Air noise is caused by trapped air, inadequate air separation, rushing water, or sub-atmospheric pressure drawing air in."
+  }
+]

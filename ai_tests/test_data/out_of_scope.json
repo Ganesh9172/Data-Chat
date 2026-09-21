@@ -1,0 +1,14 @@
+[
+  {
+    "id": "oos_boiler_price",
+    "category": "out_of_scope",
+    "question": "What is the price of my boiler?",
+    "expected_meaning": "Should politely state that pricing information is not in the documents or knowledge base."
+  },
+  {
+    "id": "oos_cricket_match",
+    "category": "out_of_scope",
+    "question": "Who won yesterday's cricket match?",
+    "expected_meaning": "Should clarify that it is an assistant for heating systems and cannot provide sports scores."
+  }
+]

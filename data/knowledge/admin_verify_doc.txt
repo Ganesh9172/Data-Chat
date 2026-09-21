@@ -1,0 +1,1 @@
+Hydronic heating pressure safety operating limit is 3.0 bar.

@@ -36,6 +36,7 @@ class ChatResponse(BaseModel):
     is_correction_prompt: Optional[bool] = False
     pending_update_id: Optional[str] = None
     related_video: Optional[RelatedVideo] = None
+    is_ground_truth_verified: Optional[bool] = False
 
 class QACreateRequest(BaseModel):
     question: str = Field(..., min_length=1)

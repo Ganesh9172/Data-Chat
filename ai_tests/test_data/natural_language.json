@@ -1,0 +1,20 @@
+[
+  {
+    "id": "nl_pressure_0.5bar",
+    "category": "natural_language",
+    "expected_meaning": "The response should correctly explain whether 0.5 bar is within the documented pressure range.",
+    "variations": [
+      "Is 0.5 bar okay?",
+      "Is half a bar okay?",
+      "0.5 bar is fine right?",
+      "My pressure is 0.5 bar, is that okay?",
+      "0.5 bar well in limit?",
+      "Is 0.5 bar within the limit?",
+      "my boiler pressure is only 0.5",
+      "pressure showing 0.5 bar",
+      "0.5 bar normal?",
+      "half bar pressure okay?",
+      "Is 0.5 bar too low?"
+    ]
+  }
+]

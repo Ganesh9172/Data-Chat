@@ -14,7 +14,7 @@ export default function MessageItem({ message, onSendPrompt }) {
     // User message: Right-aligned clean light blue-gray bubble
     return (
       <div className="message-row user-row">
-        <div className="user-bubble">
+        <div className="user-bubble" data-testid="user-message">
           {rawContent}
         </div>
       </div>
@@ -39,12 +39,19 @@ export default function MessageItem({ message, onSendPrompt }) {
       .trim();
   };
 
+  const isGroundTruth = Boolean(
+    message.is_ground_truth_verified ||
+    (message.is_ground_truth_verified !== false && message.sources && message.sources.length > 0)
+  );
+
   return (
     <div className="message-row ai-row">
-      <div className="ground-truth-badge">Ground-truth verified</div>
+      {isGroundTruth && (
+        <div className="ground-truth-badge" data-testid="ground-truth-badge">Ground-truth verified</div>
+      )}
       
       <div className="ai-card">
-        <div className="ai-card-content">
+        <div className="ai-card-content" data-testid="ai-message">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
@@ -106,13 +113,13 @@ export default function MessageItem({ message, onSendPrompt }) {
 
         {/* Source citation box matching the exact design reference */}
         {citationText ? (
-          <div className="source-citation-box">
+          <div className="source-citation-box" data-testid="citation-box">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {formatCitation(citationText)}
             </ReactMarkdown>
           </div>
         ) : sources.length > 0 && !rawContent.toLowerCase().includes("couldn't find this information") ? (
-          <div className="source-citation-box">
+          <div className="source-citation-box" data-testid="citation-box">
             <span>
               <strong>Source{sources.length > 1 ? 's' : ''}:</strong>{' '}
               {sources.map((s, idx) => (

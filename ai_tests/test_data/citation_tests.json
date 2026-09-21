@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cit_normal_pressure",
+    "category": "citations",
+    "question": "What is normal cold pressure?",
+    "expect_citation": true,
+    "expected_source_keywords": ["pressure", "bar", "manual", "technical", "spec", "firebird", "pdf"],
+    "expected_meaning": "Cold system pressure should typically be between 1.0 and 1.5 bar."
+  },
+  {
+    "id": "cit_fault_f32",
+    "category": "citations",
+    "question": "What is fault code F32?",
+    "expect_citation": true,
+    "expected_source_keywords": ["f32", "fault", "circulation", "flow", "code", "manual", "pdf"],
+    "expected_meaning": "F32 is an error code indicating insufficient circulation or flow."
+  },
+  {
+    "id": "cit_low_pressure",
+    "category": "citations",
+    "question": "What causes low water pressure in the system?",
+    "expect_citation": true,
+    "expected_source_keywords": ["pressure", "leak", "relief", "radiator", "vessel", "manual", "pdf"],
+    "expected_meaning": "Explains causes of low water pressure such as leaks, radiator bleeding, or vessel issues."
+  }
+]

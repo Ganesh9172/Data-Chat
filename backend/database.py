@@ -680,7 +680,8 @@ def get_conversation(conv_id: str, user_id: Optional[str] = None, session_id: Op
                     "title": c["title"],
                     "created_at": c.get("created_at"),
                     "updated_at": c.get("updated_at"),
-                    "messages": c.get("messages", [])
+                    "messages": c.get("messages", []),
+                    "pending_update": c.get("pending_update")
                 }
         return None
 
@@ -725,7 +726,8 @@ def insert_message(
     content: str,
     sources: Optional[List[Dict[str, Any]]] = None,
     user_id: Optional[str] = None,
-    related_video: Optional[Dict[str, Any]] = None
+    related_video: Optional[Dict[str, Any]] = None,
+    is_ground_truth_verified: bool = False
 ) -> str:
     with _lock:
         msg_id = str(uuid.uuid4())
@@ -739,7 +741,8 @@ def insert_message(
             "role": role,
             "content": content,
             "sources": sources,
-            "created_at": now_str
+            "created_at": now_str,
+            "is_ground_truth_verified": is_ground_truth_verified
         }
         if related_video:
             msg_record["related_video"] = related_video
@@ -926,6 +929,63 @@ def get_pending_update_for_conversation(conv_id: str) -> Optional[Dict[str, Any]
         item = dict(matching[0])
         item.pop("embedding", None)
         return item
+
+def get_conversation_pending_update(conv_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Returns the unified pending update state for a conversation.
+    Checks conversation-level metadata in chat_history.json as well as staged updates in knowledge_updates.json.
+    """
+    with _lock:
+        convs = _read_json_file(CHAT_HISTORY_FILE)
+        conv_state = None
+        for c in convs:
+            if c.get("id") == conv_id:
+                conv_state = c.get("pending_update")
+                break
+
+        # If conversation record has an active pending update state, return it
+        if conv_state and conv_state.get("active"):
+            return conv_state
+
+        # Check knowledge_updates.json for any staged pending update
+        ku_pending = get_pending_update_for_conversation(conv_id)
+        if ku_pending:
+            return {
+                "active": True,
+                "id": ku_pending.get("id"),
+                "field": "pressure",
+                "topic": "pressure",
+                "original_information": ku_pending.get("original_information"),
+                "corrected_information": ku_pending.get("corrected_information"),
+                "status": "awaiting_confirmation",
+                "source_document": ku_pending.get("source_document"),
+                "source_page": ku_pending.get("source_page")
+            }
+
+        return None
+
+def set_conversation_pending_update(conv_id: str, pending_update: Optional[Dict[str, Any]]) -> bool:
+    """
+    Persists or updates the pending_update state on the conversation in chat_history.json.
+    """
+    with _lock:
+        convs = _read_json_file(CHAT_HISTORY_FILE)
+        found = False
+        now_str = datetime.utcnow().isoformat()
+        for c in convs:
+            if c.get("id") == conv_id:
+                c["pending_update"] = pending_update
+                c["updated_at"] = now_str
+                found = True
+                break
+        if found:
+            _write_json_file(CHAT_HISTORY_FILE, convs)
+            return True
+        return False
+
+def clear_conversation_pending_update(conv_id: str) -> bool:
+    """Clears any active pending update state from the conversation."""
+    return set_conversation_pending_update(conv_id, None)
 
 
 # --- Overall Stats ---

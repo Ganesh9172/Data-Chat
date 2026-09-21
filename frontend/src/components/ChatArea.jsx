@@ -1,7 +1,15 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Sparkles, RotateCcw, MessageSquare, Database, Menu } from 'lucide-react';
+import { Sparkles, RotateCcw, MessageSquare, Database, Menu, ChevronRight } from 'lucide-react';
 import MessageItem from './MessageItem';
 import ChatInput from './ChatInput';
+
+const FAQ_QUESTIONS = [
+  "Is 0.7 bar boiler pressure too low?",
+  "Why does pressure rise to 2.8 bar when heating?",
+  "Why does my boiler pressure keep dropping?",
+  "Why are upstairs radiators cold?",
+  "What does boiler fault code F32 mean?"
+];
 
 export default function ChatArea({
   messages,
@@ -122,6 +130,7 @@ export default function ChatArea({
 
           <button
             type="button"
+            data-testid="new-chat-btn"
             className="header-icon-btn refresh-btn"
             onClick={onNewChat}
             title="New Chat"
@@ -140,10 +149,30 @@ export default function ChatArea({
       >
         <div className="messages-centered-column" ref={messagesContentRef}>
           {messages.length === 0 ? (
-            <div className="empty-chat-state">
-              <p className="empty-chat-prompt">
-                Ask a question about hydronic water pressure, boiler fault codes, Delta-T, or service history.
-              </p>
+            <div className="empty-chat-state" data-testid="empty-chat-state">
+              <div className="faq-header">
+                <div className="faq-sparkle-badge" aria-hidden="true">
+                  <Sparkles size={20} color="#1877F2" fill="#1877F2" />
+                </div>
+                <h2 className="faq-title">Frequently Asked Questions</h2>
+                <p className="faq-subtitle">
+                  Select a question to start, or type your own problem below.
+                </p>
+              </div>
+              <div className="faq-list" role="list" aria-label="Frequently Asked Questions">
+                {FAQ_QUESTIONS.map((question, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className="faq-item-btn"
+                    data-testid={`faq-question-${index}`}
+                    onClick={() => onSendMessage(question)}
+                  >
+                    <span className="faq-item-text">{question}</span>
+                    <ChevronRight size={18} className="faq-item-arrow" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             messages.map((msg, i) => (
@@ -157,8 +186,7 @@ export default function ChatArea({
 
           {loading && (
             <div className="message-row ai-row">
-              <div className="ground-truth-badge">Ground-truth verified</div>
-              <div className="ai-card loading-card">
+              <div className="ai-card loading-card" data-testid="loading-indicator">
                 <div className="typing-dots-indicator">
                   <span className="dot"></span>
                   <span className="dot"></span>

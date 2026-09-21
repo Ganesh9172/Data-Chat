@@ -115,6 +115,7 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
       <div className={`chat-input-pill ${isListening ? 'input-listening' : ''}`}>
         <textarea
           ref={textareaRef}
+          data-testid="chat-input"
           className="chat-input-field"
           placeholder={isListening ? "Listening to your voice..." : "Ask questions about your problem..."}
           rows={1}
@@ -154,6 +155,7 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
 
           <button
             type="button"
+            data-testid="send-btn"
             className="input-action-btn send-btn"
             onClick={handleSubmit}
             disabled={!text.trim() || disabled}

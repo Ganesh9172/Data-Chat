@@ -1,0 +1,18 @@
+{
+  "generated_at": "2026-09-20 18:01:25",
+  "total": 1,
+  "passed": 1,
+  "failed": 0,
+  "results": [
+    {
+      "category": "basic",
+      "question": "Load Firebird UI",
+      "expected": "Chat input and send button should be visible",
+      "actual": "Interface loaded successfully. Input placeholder: 'Ask questions about your problem...'",
+      "passed": true,
+      "reason": "Chat interface rendered correctly",
+      "screenshot": "",
+      "timestamp": "2026-09-20 18:01:24"
+    }
+  ]
+}

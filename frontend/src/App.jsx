@@ -86,9 +86,9 @@ First check: confirm that the gauge is showing system-water pressure rather than
 export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [conversations, setConversations] = useState([]);
-  const [activeChatId, setActiveChatId] = useState('default-1');
-  const [currentConversation, setCurrentConversation] = useState(PRESET_CONVERSATIONS['default-1']);
-  const [messages, setMessages] = useState(PRESET_CONVERSATIONS['default-1'].messages);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [currentConversation, setCurrentConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ documents: 6, chunks: 29, qa_pairs: 0 });
   const [toast, setToast] = useState(null);

@@ -15,12 +15,33 @@ from backend.database import (
     reject_knowledge_update,
     revert_knowledge_update,
     get_pending_update_for_conversation,
-    get_active_knowledge_updates
+    get_active_knowledge_updates,
+    get_conversation_pending_update,
+    set_conversation_pending_update,
+    clear_conversation_pending_update
 )
 from backend.retrieval import retrieve_relevant_knowledge
 from backend.models import PowerBIReportContext, SourceReference
 from backend.embeddings import get_embedding, vector_to_bytes
 from backend.youtube import search_related_youtube_video
+from backend.intent import (
+    INTENT_NORMAL_CONVERSATION,
+    INTENT_GENERAL_KNOWLEDGE,
+    INTENT_CURRENT_TIME_DATE,
+    INTENT_TECHNICAL_RAG_QUESTION,
+    INTENT_TECHNICAL_QUESTION,
+    INTENT_KNOWLEDGE_UPDATE,
+    INTENT_KNOWLEDGE_CORRECTION,
+    INTENT_UPDATE_CONFIRMATION,
+    INTENT_UPDATE_CANCELLATION,
+    INTENT_CLARIFICATION,
+    INTENT_FOLLOW_UP,
+    INTENT_FOLLOW_UP_QUESTION,
+    INTENT_UNKNOWN,
+    analyze_message_intent,
+    normalize_value_unit,
+    extract_explicit_value
+)
 
 DOTENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(DOTENV_PATH, override=True)
@@ -113,8 +134,10 @@ def check_normal_conversation(message: str) -> Optional[str]:
         return "You're welcome!"
 
     # 4. Identity / Purpose
-    if cleaned in ("who are you", "what are you", "what is your name", "what can you do"):
-        return "I am Firebird AI, your technical assistant for heating systems and diagnostics. How can I help you today?"
+    if cleaned in ("who are you", "what are you", "what is your name"):
+        return "I'm Firebird AI, a technical assistant for heating and plumbing information."
+    if cleaned in ("what can you do", "how can you help me", "what can you help me with"):
+        return "I'm Firebird AI, a technical assistant for heating and plumbing information. I can help diagnose heating issues, explain fault codes like F32, verify system water pressures and temperatures, and troubleshoot hydronic system problems."
 
     # 5. Farewells
     if any(cleaned == p or cleaned.startswith(p) for p in [
@@ -123,10 +146,87 @@ def check_normal_conversation(message: str) -> Optional[str]:
         return "Goodbye! Have a great day!"
 
     # 6. Casual fillers when no update is active
-    if cleaned in ("ok", "okay", "cool", "alright", "got it", "fine", "great", "nice", "sounds good"):
+    if cleaned in ("ok", "okay", "cool", "alright", "got it", "fine", "great", "nice", "sounds good", "youre welcome", "welcome"):
         return "Got it! Let me know if you have any questions about your heating system."
 
     return None
+
+def handle_current_time_date(message: str) -> str:
+    """
+    Returns direct, accurate server/system current date or time.
+    Does NOT use RAG or search PDFs.
+    """
+    now = datetime.now()
+    msg_lower = message.lower().strip()
+    cleaned = re.sub(r"[^\w\s]", "", msg_lower)
+
+    # Date formatting: e.g. "Sunday, 20 September 2026"
+    day_num = now.day
+    date_str = f"{now.strftime('%A')}, {day_num} {now.strftime('%B %Y')}"
+    # Time formatting: e.g. "2:45 PM"
+    time_str = now.strftime("%I:%M %p").lstrip("0")
+
+    is_time_query = any(w in cleaned for w in ["time", "current time"]) and not any(w in cleaned for w in ["date", "day"])
+
+    if is_time_query:
+        return f"The current time is {time_str}."
+    else:
+        # Default date response matching example: "Today is Sunday, 20 September 2026."
+        return f"Today is {date_str}."
+
+def answer_general_knowledge(message: str, client: Optional[Any] = None, model: str = "openai/gpt-oss-120b") -> str:
+    """
+    Answers basic general/conversational questions (e.g. 'What is AI?', 'What is RAG?', 'How can you help me?')
+    conversationally without using RAG or searching PDFs.
+    """
+    msg_clean = re.sub(r"[^\w\s]", "", message.lower()).strip()
+
+    if "what is rag" in msg_clean or "what does rag mean" in msg_clean:
+        return (
+            "RAG stands for Retrieval-Augmented Generation. It is an AI framework that combines information retrieval "
+            "with language models. Instead of relying solely on training data, RAG retrieves relevant excerpts from a verified "
+            "knowledge base (such as technical manuals or PDF documents) and feeds them to the language model to generate accurate, "
+            "source-grounded answers."
+        )
+    if "what is ai" in msg_clean or "what does ai mean" in msg_clean or "artificial intelligence" in msg_clean:
+        return (
+            "AI (Artificial Intelligence) refers to computer systems and software designed to perform tasks that "
+            "typically require human intelligence, such as reasoning, pattern recognition, problem solving, and understanding natural language."
+        )
+    if any(phrase in msg_clean for phrase in ["how can you help me", "what can you help me with", "how do i use this chatbot", "what can you do", "how can you help"]):
+        return (
+            "I'm Firebird AI, your technical assistant for heating and plumbing systems. I can help you with:\n"
+            "* Troubleshooting boiler and hydronic heating issues\n"
+            "* Explaining fault codes (like F32)\n"
+            "* Providing guidance on normal water pressures and system temperatures\n"
+            "* Diagnosing cold radiators and circulation issues\n"
+            "* Recording approved corrections to the technical knowledge base"
+        )
+
+    if client:
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are Firebird AI, a technical assistant for heating and plumbing systems. "
+                            "Answer general questions (such as questions about AI, technology, or general concepts) "
+                            "conversationally, concisely, and naturally in 1-2 short paragraphs. "
+                            "Do NOT invent citations. Do NOT say 'I couldn't find this information in the provided documents'."
+                        )
+                    },
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.3,
+                max_tokens=300
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"[General Knowledge LLM] Error: {e}")
+
+    return "I'm Firebird AI. I can assist you with heating and plumbing technical diagnostics, answering technical questions, and helping troubleshoot your heating system."
 
 def check_explicit_correction(message: str) -> Dict[str, Any]:
     """
@@ -415,6 +515,46 @@ def synthesize_professional_fallback(message: str, retrieved_chunks: List[Dict[s
         citation = "**Sources:**\n" + "\n".join([f"* {s}" for s in fb_sources])
     return f"Based on the provided technical documentation, please verify system water pressure, check for leaks, and inspect circulator pump and valve positions.\n\n{citation}"
 
+def generate_conversational_explanation(message: str, history: List[Dict[str, Any]], client: Any, model: str) -> str:
+    """Explains or expands on the previous assistant answer in a clear, conversational tone without RAG search."""
+    last_assistant = ""
+    for m in reversed(history):
+        if m.get("role") == "assistant":
+            last_assistant = m.get("content", "")
+            break
+
+    if not last_assistant:
+        return "Sure — what would you like me to explain?"
+
+    # Strip any source citation lines from the previous answer for a clean explanation
+    clean_prev = re.sub(r"\*\*Sources?:\*\*.*$", "", last_assistant, flags=re.DOTALL | re.IGNORECASE).strip()
+
+    if client:
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are Firebird AI, a friendly and helpful technical heating assistant. "
+                            "The user is asking you to explain, clarify, or expand on what was previously discussed. "
+                            "Explain the concept conversationally in clear, simple, accessible terms. "
+                            "Do NOT invent new numerical facts, do NOT cite sources, and do NOT say 'I couldn't find this information in the provided documents'."
+                        )
+                    },
+                    {"role": "assistant", "content": clean_prev},
+                    {"role": "user", "content": message}
+                ],
+                temperature=0.2,
+                max_tokens=400
+            )
+            return resp.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"[Chat] Conversational explanation error: {e}")
+
+    return f"To explain that further: {clean_prev}"
+
 def generate_chat_response(
     message: str,
     conversation_id: Optional[str] = None,
@@ -459,207 +599,394 @@ def generate_chat_response(
     # INTENT SEPARATION & DISPATCH
     # =========================================================================
 
-    # --- INTENT E / F: CONFIRMATION & CANCELLATION (ONLY if pending update exists) ---
-    pending_update = get_pending_update_for_conversation(conversation_id)
-    if pending_update:
-        cleaned_tok = re.sub(r"[^\w\s]", "", msg_lower).strip()
-        
-        # Affirmative Confirmation
-        affirmative_words = {"yes", "confirm", "yep", "save it", "save", "do it", "approved", "ok save", "sure", "please save", "yes please", "yes save it"}
-        if cleaned_tok in affirmative_words or any(cleaned_tok == w for w in affirmative_words):
-            if not can_update_knowledge:
-                answer = "You do not have permission to modify or update the knowledge base. Please contact an administrator."
-                insert_message(conversation_id, "user", message, user_id=user_id)
-                insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
-                return {
-                    "conversation_id": conversation_id,
-                    "answer": answer,
-                    "sources": [],
-                    "is_correction_prompt": False
-                }
+    # 1. Retrieve current pending update state (from conversation metadata and staged records)
+    pending_update = get_conversation_pending_update(conversation_id)
 
-            emb = vector_to_bytes(get_embedding(
-                f"{pending_update['original_information']} {pending_update['corrected_information']}"
-            ))
-            approve_knowledge_update(pending_update["id"], embedding=emb)
-            answer = "Done. The correction has been saved."
-            insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
-            return {
-                "conversation_id": conversation_id,
-                "answer": answer,
-                "sources": [],
-                "is_correction_prompt": False
-            }
-
-        # Negative / Cancellation
-        negative_words = {"no", "cancel", "don't save", "do not save", "never mind", "stop", "abort", "discard", "no thanks"}
-        if cleaned_tok in negative_words or any(cleaned_tok == w for w in negative_words):
-            reject_knowledge_update(pending_update["id"])
-            answer = "Understood. The correction has been cancelled and was not saved."
-            insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
-            return {
-                "conversation_id": conversation_id,
-                "answer": answer,
-                "sources": [],
-                "is_correction_prompt": False
-            }
-
-    # --- INTENT: REVERT UPDATE ---
-    if any(phrase in msg_lower for phrase in ["revert update", "revert correction", "revert the last update", "revert knowledge update"]):
+    # 2. Revert Knowledge Update Request
+    if any(phrase in msg_lower for phrase in ["revert update", "revert correction", "revert the last update", "revert knowledge update", "undo update"]):
         if not can_update_knowledge:
             answer = "You do not have permission to revert knowledge base updates. Please contact an administrator."
             insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
                 "sources": [],
-                "is_correction_prompt": False
+                "is_correction_prompt": False,
+                "is_ground_truth_verified": False
             }
 
         active_updates = get_active_knowledge_updates()
         if active_updates:
             latest_update = active_updates[-1]
             revert_knowledge_update(latest_update["id"])
+            clear_conversation_pending_update(conversation_id)
             answer = f"Done. Knowledge base update #{latest_update.get('update_number', 1)} has been reverted. The original PDF information is now active again."
         else:
             answer = "There are no active knowledge updates to revert."
         insert_message(conversation_id, "user", message, user_id=user_id)
-        insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+        insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
         return {
             "conversation_id": conversation_id,
             "answer": answer,
             "sources": [],
-            "is_correction_prompt": False
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
         }
 
-    # --- INTENT: PROVIDING CORRECTION INFORMATION (Follow-up to "What is the correct information?") ---
-    was_prompted_for_info = (
-        "what is the correct information" in last_assistant_msg.lower() or
-        "what should the correct value or information be" in last_assistant_msg.lower() or
-        "what should the correct value be" in last_assistant_msg.lower()
+    # 3. Analyze user message intent using the natural-language intent detection layer
+    client = get_openai_client()
+    primary_model = os.getenv("AI_MODEL", "openai/gpt-oss-120b").strip()
+
+    intent_res = analyze_message_intent(
+        message=message,
+        history=history,
+        pending_update=pending_update,
+        client=client,
+        model=primary_model
     )
-    if was_prompted_for_info:
+    detected_intent = intent_res.get("intent", INTENT_UNKNOWN)
+    intent_topic = intent_res.get("topic")
+    extracted_val = intent_res.get("extracted_value")
+    explanation_requested = intent_res.get("explanation_request", False)
+
+    # 4. Handle UPDATE_CONFIRMATION (ONLY when an active pending update exists)
+    if detected_intent == INTENT_UPDATE_CONFIRMATION and pending_update and pending_update.get("active"):
         if not can_update_knowledge:
-            answer = "You do not have permission to modify the knowledge base. Only administrators or users with update_knowledge permission can submit corrections."
+            answer = "You do not have permission to modify or update the knowledge base. Please contact an administrator."
             insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
                 "sources": [],
-                "is_correction_prompt": False
+                "is_correction_prompt": False,
+                "is_ground_truth_verified": False
             }
 
-        provided_val = extract_value_from_text(msg_clean) or msg_clean
-        # Ensure unit if user just gave numbers
-        if re.search(r"[0-9]", provided_val) and "bar" not in provided_val.lower() and "°c" not in provided_val.lower():
-            provided_val = f"{provided_val} bar"
+        update_id = pending_update.get("id") or pending_update.get("update_id")
+        corr_info = pending_update.get("corrected_information") or "1.2 bar"
+        orig_info = pending_update.get("original_information") or "pressure range 1.0–1.5 bar"
 
-        staged_ku = create_knowledge_update(
-            original_information="pressure range 1.0–1.5 bar",
-            corrected_information=provided_val,
-            source_document="01_Hydronic_Water_Pressure_Field_Guide.pdf",
-            source_page=1,
-            reason=f"User correction via chat: {message}",
-            status="pending",
-            conversation_id=conversation_id
-        )
+        if not update_id:
+            staged = create_knowledge_update(
+                original_information=orig_info,
+                corrected_information=corr_info,
+                source_document=pending_update.get("source_document") or "01_Hydronic_Water_Pressure_Field_Guide.pdf",
+                source_page=pending_update.get("source_page") or 1,
+                reason=f"User correction via chat: {corr_info}",
+                status="pending",
+                conversation_id=conversation_id
+            )
+            update_id = staged["id"]
 
-        answer = (
-            f"I understand. You want to update the pressure range to {provided_val}.\n\n"
-            f"Should I save this correction to the knowledge base?"
-        )
+        emb = vector_to_bytes(get_embedding(f"{orig_info} {corr_info}"))
+        approve_knowledge_update(update_id, embedding=emb)
+        clear_conversation_pending_update(conversation_id)
+
+        answer = "Done. The correction has been saved and added to the knowledge base."
         insert_message(conversation_id, "user", message, user_id=user_id)
-        insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+        insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
         return {
             "conversation_id": conversation_id,
             "answer": answer,
             "sources": [],
-            "is_correction_prompt": True,
-            "pending_update_id": staged_ku["id"]
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
         }
 
-    # --- INTENT C / D: EXPLICIT KNOWLEDGE CORRECTION OR UPDATE ---
-    correction_eval = check_explicit_correction(message)
-    if correction_eval["is_correction"]:
-        if not can_update_knowledge:
-            answer = "You do not have permission to modify the knowledge base. Only administrators or users with update_knowledge permission can submit corrections."
-            insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
-            return {
-                "conversation_id": conversation_id,
-                "answer": answer,
-                "sources": [],
-                "is_correction_prompt": False
-            }
+    # 5. Handle UPDATE_CANCELLATION (ONLY when an active pending update exists)
+    if detected_intent == INTENT_UPDATE_CANCELLATION and pending_update and pending_update.get("active"):
+        update_id = pending_update.get("id") or pending_update.get("update_id")
+        if update_id:
+            reject_knowledge_update(update_id)
+        clear_conversation_pending_update(conversation_id)
 
-        if not correction_eval["has_value"]:
-            # User pointed out an error but did NOT provide the corrected value.
-            # RULE: NEVER invent a value! Ask for the correct information naturally.
-            if "wrong" in msg_lower:
-                answer = "Thanks for pointing that out. What is the correct information you'd like me to save?"
-            else:
-                answer = "I can update the knowledge base, but I need the correct information first. What should the correct value or information be?"
+        answer = "Understood. The correction has been cancelled and was not saved."
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
+        }
 
-            insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
-            return {
-                "conversation_id": conversation_id,
-                "answer": answer,
-                "sources": [],
-                "is_correction_prompt": False
-            }
-        else:
-            # User provided the actual corrected value!
-            corrected_val = correction_eval["corrected_value"]
-            if "bar" not in corrected_val.lower() and "°c" not in corrected_val.lower():
-                corrected_val = f"{corrected_val} bar"
+    # 6. Multi-turn continuation when actively awaiting correction/value
+    if pending_update and pending_update.get("active") and pending_update.get("status") in ["awaiting_correction", "awaiting_field_and_value"]:
+        val_provided = extracted_val or extract_explicit_value(message)
+        if val_provided:
+            if not can_update_knowledge:
+                answer = "You do not have permission to modify the knowledge base. Only administrators or users with update_knowledge permission can submit corrections."
+                insert_message(conversation_id, "user", message, user_id=user_id)
+                insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
+                return {
+                    "conversation_id": conversation_id,
+                    "answer": answer,
+                    "sources": [],
+                    "is_correction_prompt": False,
+                    "is_ground_truth_verified": False
+                }
 
+            target_topic = pending_update.get("topic") or intent_topic or "pressure"
+            norm_val = normalize_value_unit(val_provided, target_topic)
             staged_ku = create_knowledge_update(
-                original_information="pressure range 1.0–1.5 bar",
-                corrected_information=corrected_val,
+                original_information=f"{target_topic} range 1.0–1.5 bar" if target_topic == "pressure" else f"{target_topic} specification",
+                corrected_information=norm_val,
                 source_document="01_Hydronic_Water_Pressure_Field_Guide.pdf",
                 source_page=1,
                 reason=f"User correction via chat: {message}",
                 status="pending",
                 conversation_id=conversation_id
             )
-
-            answer = (
-                f"I understand. You want to update the pressure range to {corrected_val}.\n\n"
-                f"Should I save this correction to the knowledge base?"
-            )
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": target_topic,
+                "field": target_topic,
+                "original_information": f"{target_topic} range 1.0–1.5 bar" if target_topic == "pressure" else f"{target_topic} specification",
+                "corrected_information": norm_val,
+                "status": "awaiting_confirmation",
+                "update_id": staged_ku["id"]
+            })
+            if "–" in norm_val or "-" in norm_val:
+                answer = f"Understood. You want to update the {target_topic} range to {norm_val}. Should I save this correction to the knowledge base?"
+            else:
+                answer = f"Understood. You want to update the {target_topic} value to {norm_val}. Would you like me to save this correction?"
             insert_message(conversation_id, "user", message, user_id=user_id)
-            insert_message(conversation_id, "assistant", answer, [], user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
             return {
                 "conversation_id": conversation_id,
                 "answer": answer,
                 "sources": [],
                 "is_correction_prompt": True,
-                "pending_update_id": staged_ku["id"]
+                "pending_update_id": staged_ku["id"],
+                "is_ground_truth_verified": False
             }
 
-    # --- INTENT A: NORMAL CONVERSATION (Greetings, thanks, well-being, polite chat) ---
-    normal_reply = check_normal_conversation(message)
-    if normal_reply:
+        # User gave topic only (e.g. "The pressure value." or "pressure")
+        if intent_topic or any(w in msg_lower for w in ["pressure", "temperature", "fault code", "f32"]):
+            chosen_topic = intent_topic or "pressure"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": chosen_topic,
+                "field": chosen_topic,
+                "corrected_information": None,
+                "status": "awaiting_correction"
+            })
+            answer = f"Sure. What should the correct {chosen_topic} value be?"
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False,
+                "is_ground_truth_verified": False
+            }
+
+    # 7. Knowledge Update or Correction Workflow
+    if detected_intent in [INTENT_KNOWLEDGE_UPDATE, INTENT_KNOWLEDGE_CORRECTION]:
+        if not can_update_knowledge:
+            answer = "You do not have permission to modify the knowledge base. Only administrators or users with update_knowledge permission can submit corrections."
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": False,
+                "is_ground_truth_verified": False
+            }
+
+        # 7A: Explicit correction directly provided with value
+        val_in_msg = extracted_val or extract_explicit_value(message)
+        if val_in_msg:
+            target_topic = intent_topic or "pressure"
+            norm_val = normalize_value_unit(val_in_msg, target_topic)
+            staged_ku = create_knowledge_update(
+                original_information=f"{target_topic} range 1.0–1.5 bar" if target_topic == "pressure" else f"{target_topic} specification",
+                corrected_information=norm_val,
+                source_document="01_Hydronic_Water_Pressure_Field_Guide.pdf",
+                source_page=1,
+                reason=f"User correction via chat: {message}",
+                status="pending",
+                conversation_id=conversation_id
+            )
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": target_topic,
+                "field": target_topic,
+                "original_information": f"{target_topic} range 1.0–1.5 bar" if target_topic == "pressure" else f"{target_topic} specification",
+                "corrected_information": norm_val,
+                "status": "awaiting_confirmation",
+                "update_id": staged_ku["id"]
+            })
+            if "–" in norm_val or "-" in norm_val:
+                answer = f"Understood. You want to update the {target_topic} range to {norm_val}. Should I save this correction to the knowledge base?"
+            else:
+                answer = f"Understood. You want to update the {target_topic} value to {norm_val}. Would you like me to save this correction?"
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
+            return {
+                "conversation_id": conversation_id,
+                "answer": answer,
+                "sources": [],
+                "is_correction_prompt": True,
+                "pending_update_id": staged_ku["id"],
+                "is_ground_truth_verified": False
+            }
+
+        # 7B: Correction/Update without value -> NEVER invent values! Prompt naturally and save pending state
+        clean_tok = re.sub(r"[^\w\s]", "", msg_lower).strip()
+
+        if clean_tok in ["i want to update a value", "i want to update this information", "update this information"]:
+            answer = "Sure. Which value would you like to update, and what should the new value be?"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": None,
+                "field": None,
+                "corrected_information": None,
+                "status": "awaiting_field_and_value"
+            })
+        elif clean_tok in ["i want to update something", "i need to change something", "i want to change something", "can i update this", "can i correct this", "i need to correct something"]:
+            answer = "Sure. What would you like to update?"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": None,
+                "field": None,
+                "corrected_information": None,
+                "status": "awaiting_field_and_value"
+            })
+        elif "pressure" in msg_lower and any(w in msg_lower for w in ["update", "change", "mention", "gave me"]):
+            answer = "Sure. What should the correct pressure value be?"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": "pressure",
+                "field": "pressure",
+                "corrected_information": None,
+                "status": "awaiting_correction"
+            })
+        elif any(w in msg_lower for w in ["update the knowledge base", "can i update the knowledge base"]):
+            answer = "Yes, you can update the knowledge base. What information or value would you like to update?"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": None,
+                "field": None,
+                "corrected_information": None,
+                "status": "awaiting_field_and_value"
+            })
+        elif intent_topic == "pressure" and "pressure" in msg_lower:
+            answer = "Thanks for pointing that out. What should the correct pressure value be?"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": "pressure",
+                "field": "pressure",
+                "corrected_information": None,
+                "status": "awaiting_correction"
+            })
+        else:
+            # General correction pointing out an error (or contextual correction)
+            answer = "Thanks for pointing that out. What is the correct information you'd like me to use?"
+            set_conversation_pending_update(conversation_id, {
+                "active": True,
+                "topic": intent_topic or "pressure",
+                "field": intent_topic or "pressure",
+                "corrected_information": None,
+                "status": "awaiting_correction"
+            })
+
         insert_message(conversation_id, "user", message, user_id=user_id)
-        insert_message(conversation_id, "assistant", normal_reply, [], user_id=user_id)
+        insert_message(conversation_id, "assistant", answer, [], user_id=user_id, is_ground_truth_verified=False)
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
+        }
+
+    # 8. Date and Time Questions (Category: CURRENT_TIME_DATE)
+    if detected_intent == INTENT_CURRENT_TIME_DATE:
+        time_reply = handle_current_time_date(message)
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", time_reply, [], user_id=user_id, is_ground_truth_verified=False)
+        return {
+            "conversation_id": conversation_id,
+            "answer": time_reply,
+            "sources": [],
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
+        }
+
+    # 9. General Knowledge & Conceptual Questions (Category: GENERAL_KNOWLEDGE)
+    if detected_intent == INTENT_GENERAL_KNOWLEDGE:
+        gen_reply = answer_general_knowledge(message, client, primary_model)
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", gen_reply, [], user_id=user_id, is_ground_truth_verified=False)
+        return {
+            "conversation_id": conversation_id,
+            "answer": gen_reply,
+            "sources": [],
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
+        }
+
+    # 10. Normal Conversation & Clarification (Category: NORMAL_CONVERSATION)
+    if detected_intent in [INTENT_NORMAL_CONVERSATION, INTENT_CLARIFICATION]:
+        if explanation_requested:
+            explanation_reply = generate_conversational_explanation(message, history, client, primary_model)
+            insert_message(conversation_id, "user", message, user_id=user_id)
+            insert_message(conversation_id, "assistant", explanation_reply, [], user_id=user_id, is_ground_truth_verified=False)
+            return {
+                "conversation_id": conversation_id,
+                "answer": explanation_reply,
+                "sources": [],
+                "is_correction_prompt": False,
+                "is_ground_truth_verified": False
+            }
+
+        normal_reply = check_normal_conversation(message)
+        if not normal_reply and client:
+            try:
+                resp = client.chat.completions.create(
+                    model=primary_model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are Firebird AI, a technical assistant for heating and plumbing systems. "
+                                "Respond naturally, concisely, and helpfully in 1-2 friendly sentences. "
+                                "Do NOT invent document citations and do NOT say you couldn't find the information in documents."
+                            )
+                        },
+                        {"role": "user", "content": message}
+                    ],
+                    temperature=0.3,
+                    max_tokens=150
+                )
+                normal_reply = resp.choices[0].message.content.strip()
+            except Exception as e:
+                print(f"[Chat] Conversational response error: {e}")
+
+        if not normal_reply:
+            normal_reply = "I'm Firebird AI, your technical assistant for heating and plumbing information. How can I help you today?"
+
+        insert_message(conversation_id, "user", message, user_id=user_id)
+        insert_message(conversation_id, "assistant", normal_reply, [], user_id=user_id, is_ground_truth_verified=False)
         return {
             "conversation_id": conversation_id,
             "answer": normal_reply,
             "sources": [],
-            "is_correction_prompt": False
+            "is_correction_prompt": False,
+            "is_ground_truth_verified": False
         }
 
-    # --- INTENT B: TECHNICAL QUESTION (Normal RAG Workflow) ---
-    retrieval_query = message
-    if history:
+    # 9. Technical Questions & Follow-Up (Normal RAG Workflow)
+    retrieval_query = intent_res.get("resolved_query") or message
+    if retrieval_query == message and history:
         user_msgs = [m["content"] for m in history if m["role"] == "user"]
         if user_msgs:
-            # Only append previous question if not a greeting or correction
             if len(user_msgs[-1].split()) > 2 and not check_normal_conversation(user_msgs[-1]):
                 retrieval_query = f"{user_msgs[-1]} {message}"
 
@@ -700,6 +1027,10 @@ def generate_chat_response(
             "content": past_msg["content"]
         })
 
+    question_for_prompt = message
+    if retrieval_query and retrieval_query != message:
+        question_for_prompt = f"{message} (Context: {retrieval_query})"
+
     user_augmented_content = (
         f"{context_str}\n\n"
         f"INSTRUCTION:\n"
@@ -708,7 +1039,7 @@ def generate_chat_response(
         f"3. CRITICAL: Do NOT invent values. Do NOT introduce or discuss knowledge updates or corrections unless the user asked for one.\n"
         f"4. If the specific symptom, condition, or procedure asked about is NOT explicitly mentioned in the retrieved documents (for example: radiator replacement / replacing a radiator, a radiator being cold at top / hot at bottom or vice versa, short cycling, or bleeding a radiator every few weeks), you MUST NOT substitute general checks. You must answer strictly: 'I couldn't find this information in the provided documents.'\n"
         f"5. Direct answer first, short explanation if needed, and cite the source document(s) at the end.\n\n"
-        f"User Question:\n{message}"
+        f"User Question:\n{question_for_prompt}"
     )
     messages_payload.append({"role": "user", "content": user_augmented_content})
 
@@ -738,10 +1069,10 @@ def generate_chat_response(
                 continue
 
         if not answer:
-            answer = synthesize_professional_fallback(message, retrieved_chunks)
+            answer = synthesize_professional_fallback(question_for_prompt, retrieved_chunks)
     else:
         print("[Chat] LLM client unavailable, using strict grounded fallback synthesizer.")
-        answer = synthesize_professional_fallback(message, retrieved_chunks)
+        answer = synthesize_professional_fallback(question_for_prompt, retrieved_chunks)
 
     # Format Citations
     answer = format_citations_clean(answer, retrieved_chunks)
@@ -778,9 +1109,17 @@ def generate_chat_response(
         print(f"[YouTube] Video search safely handled: {e}")
         related_video = None
 
+    is_gt_verified = False
+    if "couldn't find this information in the provided documents" not in answer.lower() and len(sources_to_cite) > 0:
+        is_gt_verified = True
+
     # Persist in JSON Storage
     insert_message(conversation_id, "user", message, user_id=user_id)
-    insert_message(conversation_id, "assistant", answer, sources_to_cite, user_id=user_id, related_video=related_video)
+    insert_message(
+        conversation_id, "assistant", answer, sources_to_cite,
+        user_id=user_id, related_video=related_video,
+        is_ground_truth_verified=is_gt_verified
+    )
 
     if is_new_conversation and len(message) > 40:
         short_title = message[:40].strip() + "..."
@@ -791,5 +1130,6 @@ def generate_chat_response(
         "answer": answer,
         "sources": sources_to_cite,
         "is_correction_prompt": False,
-        "related_video": related_video
+        "related_video": related_video,
+        "is_ground_truth_verified": is_gt_verified
     }

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "followup_pressure_hot",
+    "category": "followup",
+    "turns": [
+      {
+        "question": "My pressure is 0.5 bar, is that okay?",
+        "expected_meaning": "Explains pressure status for 0.5 bar."
+      },
+      {
+        "question": "What if it goes to 2.5 bar when hot?",
+        "expected_meaning": "Explains that rising from 0.5 to 2.5 bar hot is a large swing indicating expansion vessel problems."
+      }
+    ]
+  },
+  {
+    "id": "followup_f32_causes",
+    "category": "followup",
+    "turns": [
+      {
+        "question": "What is F32?",
+        "expected_meaning": "Explains F32 is insufficient circulation detected."
+      },
+      {
+        "question": "Why does that happen?",
+        "expected_meaning": "Explains why F32 happens (pump issue, closed valves, airlock, clogged strainer)."
+      }
+    ]
+  }
+]

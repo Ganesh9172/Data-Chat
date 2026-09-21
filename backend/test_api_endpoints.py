@@ -14,6 +14,10 @@ def test_api():
     print("=" * 70)
 
     client = TestClient(app)
+    admin_login_res = client.post("/api/admin/login", json={"password": "AdminSecurePass123!"})
+    token = admin_login_res.json()["access_token"]
+    auth_headers = {"Authorization": f"Bearer {token}", "X-Session-ID": "test_api_sess"}
+    session_headers = {"X-Session-ID": "test_api_sess"}
 
     # 1. Health check
     print("\n1. Testing GET /api/health...")
@@ -28,7 +32,7 @@ def test_api():
 
     # 2. List Knowledge
     print("\n2. Testing GET /api/knowledge...")
-    resp = client.get("/api/knowledge")
+    resp = client.get("/api/knowledge", headers=auth_headers)
     assert resp.status_code == 200
     kb_data = resp.json()
     print(f"Indexed documents: {len(kb_data['documents'])}, QA pairs: {len(kb_data['qa_pairs'])}, Updates: {len(kb_data['knowledge_updates'])}")
@@ -37,13 +41,13 @@ def test_api():
 
     # 3. Create & List Chats
     print("\n3. Testing Conversation management endpoints...")
-    resp = client.post("/api/chats", json={"title": "Test Chat API"})
+    resp = client.post("/api/chats", json={"title": "Test Chat API"}, headers=session_headers)
     assert resp.status_code == 200
     chat_info = resp.json()
     chat_id = chat_info["id"]
     print(f"Created chat: {chat_id}")
 
-    resp = client.get(f"/api/chats/{chat_id}")
+    resp = client.get(f"/api/chats/{chat_id}", headers=session_headers)
     assert resp.status_code == 200
     conv_data = resp.json()
     assert conv_data["title"] == "Test Chat API"
@@ -55,7 +59,7 @@ def test_api():
         "message": "What is the typical cold fill pressure?",
         "conversation_id": chat_id
     }
-    resp = client.post("/api/chat", json=chat_payload)
+    resp = client.post("/api/chat", json=chat_payload, headers=session_headers)
     assert resp.status_code == 200
     chat_res = resp.json()
     print("Chat answer:", chat_res["answer"][:120] + "...")
@@ -72,30 +76,30 @@ def test_api():
         "reason": "REST API Test update",
         "status": "approved"
     }
-    resp = client.post("/api/knowledge/updates", json=update_payload)
+    resp = client.post("/api/knowledge/updates", json=update_payload, headers=auth_headers)
     assert resp.status_code == 200
     ku_data = resp.json()
     ku_id = ku_data["id"]
     print(f"Created Knowledge Update: {ku_id} (Update #{ku_data.get('update_number')})")
 
     # List updates
-    resp = client.get("/api/knowledge/updates")
+    resp = client.get("/api/knowledge/updates", headers=auth_headers)
     assert resp.status_code == 200
     updates_list = resp.json()
     assert any(u["id"] == ku_id for u in updates_list)
 
     # Revert update
-    resp = client.post(f"/api/knowledge/updates/{ku_id}/revert")
+    resp = client.post(f"/api/knowledge/updates/{ku_id}/revert", headers=auth_headers)
     assert resp.status_code == 200
     print(">> Update reverted successfully!")
 
     # Delete update
-    resp = client.delete(f"/api/knowledge/updates/{ku_id}")
+    resp = client.delete(f"/api/knowledge/updates/{ku_id}", headers=auth_headers)
     assert resp.status_code == 200
     print(">> Update deleted successfully!")
 
     # Clean up chat
-    resp = client.delete(f"/api/chats/{chat_id}")
+    resp = client.delete(f"/api/chats/{chat_id}", headers=session_headers)
     assert resp.status_code == 200
     print(">> Test chat deleted successfully!")
 
