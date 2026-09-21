@@ -58,9 +58,16 @@ from backend.knowledge import (
 )
 from backend.chat import generate_chat_response
 from backend.embeddings import get_embedding, vector_to_bytes
+from backend.init_knowledge import auto_load_knowledge_from_directory
 
 # Initialize JSON file storage
 init_db()
+
+# Automatically index any knowledge files (PDF/text) found in data/knowledge/
+# that are not yet present in the knowledge base. This runs on every startup
+# so the bot is functional immediately after deployment without requiring
+# manual admin uploads. Idempotent: already-indexed files are skipped.
+auto_load_knowledge_from_directory()
 
 app = FastAPI(
     title="Firebird AI Backend",
