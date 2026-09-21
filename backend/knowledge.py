@@ -21,7 +21,17 @@ from backend.embeddings import (
     vector_to_bytes
 )
 
-KNOWLEDGE_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "knowledge")
+DATA_DIR = os.getenv("DATA_DIR")
+
+if not DATA_DIR:
+    DATA_DIR = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data"
+    )
+
+KNOWLEDGE_DATA_DIR = os.path.join(DATA_DIR, "knowledge")
+
+os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(KNOWLEDGE_DATA_DIR, exist_ok=True)
 
 def clean_text(text: str) -> str:
