@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+import asyncio
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,9 +61,7 @@ from backend.knowledge import (
 from backend.chat import generate_chat_response
 from backend.embeddings import get_embedding, vector_to_bytes
 
-# Initialize JSON file storage and runtime knowledge documents
-init_db()
-init_knowledge_base()
+
 
 app = FastAPI(
     title="Firebird AI Backend",
@@ -70,6 +69,18 @@ app = FastAPI(
     version="2.2.0"
 )
 
+
+@app.on_event("startup")
+async def startup_event():
+    init_db()
+
+    # Run knowledge-base initialization in the background
+    # so the API can start accepting requests immediately.
+    asyncio.create_task(
+        asyncio.to_thread(init_knowledge_base)
+    )
+
+    
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
