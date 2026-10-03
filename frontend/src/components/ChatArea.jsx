@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Sparkles, RotateCcw, MessageSquare, Database, Menu, ChevronRight } from 'lucide-react';
+import { Sparkles, RotateCcw, Database, PanelLeft, ChevronRight } from 'lucide-react';
 import MessageItem from './MessageItem';
 import ChatInput from './ChatInput';
 
@@ -17,7 +17,8 @@ export default function ChatArea({
   onSendMessage,
   onOpenKnowledge,
   onNewChat,
-  onToggleDrawer,
+  isSidebarOpen,
+  onToggleSidebar,
   isAdmin
 }) {
   const scrollContainerRef = useRef(null);
@@ -60,7 +61,7 @@ export default function ChatArea({
     }
   }, [messages, scrollToBottom]);
 
-  // Auto-scroll when loading state toggles (e.g. typing indicator appears/disappears)
+  // Auto-scroll when loading state toggles
   useEffect(() => {
     if (isUserNearBottomRef.current) {
       scrollToBottom('smooth');
@@ -84,19 +85,19 @@ export default function ChatArea({
 
   return (
     <main className="chat-main-layout">
-      {/* Top Banner exactly matching the design reference */}
+      {/* Top Banner with left sidebar toggle and clean right side */}
       <header className="bot-header-banner">
         <div className="bot-header-left">
           <button
             type="button"
-            className="header-menu-btn"
-            onClick={onToggleDrawer}
-            title="Menu"
-            aria-label="Open sidebar menu"
+            className="header-sidebar-toggle-btn"
+            onClick={onToggleSidebar}
+            title={isSidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+            aria-label="Toggle sidebar"
           >
-            <Menu size={20} color="#FFFFFF" />
+            <PanelLeft size={20} color="#FFFFFF" />
           </button>
-          <div className="bot-sparkle-icon">
+          <div className="bot-sparkle-icon" aria-hidden="true">
             <Sparkles size={22} color="#FFFFFF" fill="#FFFFFF" />
           </div>
           <div className="bot-title-group">
@@ -105,17 +106,8 @@ export default function ChatArea({
           </div>
         </div>
 
+        {/* Right side remains clean: only New Chat / Admin KB */}
         <div className="bot-header-right">
-          <button
-            type="button"
-            className="header-icon-btn header-chats-btn"
-            onClick={onToggleDrawer}
-            title="Recent Chats"
-            aria-label="Recent Chats"
-          >
-            <MessageSquare size={18} color="#FFFFFF" />
-          </button>
-
           {isAdmin && (
             <button
               type="button"
@@ -196,12 +188,12 @@ export default function ChatArea({
             </div>
           )}
 
-          {/* Bottom spacing element so the last word is never covered by the floating input */}
+          {/* Bottom spacing element so the last word is never covered by the composer */}
           <div className="chat-bottom-spacer" aria-hidden="true" />
         </div>
       </div>
 
-      {/* Input Pill Bar pinned at bottom */}
+      {/* Modern ChatGPT-like message composer at bottom */}
       <ChatInput
         onSend={onSendMessage}
         disabled={loading}

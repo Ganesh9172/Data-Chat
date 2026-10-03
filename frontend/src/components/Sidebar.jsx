@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, Trash2, Database, X, Lock, LogOut, Shield, Sparkles } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, Database, Lock, LogOut, Shield, Sparkles, PanelLeftClose } from 'lucide-react';
 
 export default function Sidebar({
   isOpen,
@@ -22,107 +22,96 @@ export default function Sidebar({
 
   const displayQueries = (conversations && conversations.length > 0) ? conversations : defaultQueries;
 
+  const handleSelect = (id) => {
+    onSelectChat(id);
+    // On small screens, close the slide-over overlay so user sees the conversation immediately
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      onClose?.();
+    }
+  };
+
+  const handleNewChat = () => {
+    onNewChat();
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      onClose?.();
+    }
+  };
+
   return (
     <>
-      {/* Backdrop overlay */}
-      {isOpen && <div className="drawer-backdrop" onClick={onClose} />}
+      {/* Mobile-only backdrop overlay */}
+      {isOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Slide-over Drawer */}
-      <aside className={`recent-chats-drawer ${isOpen ? 'open' : ''}`}>
-        <div className="drawer-header">
-          <div className="drawer-title-row">
-            <div className="drawer-sparkle-badge">
+      {/* Main Left Sidebar */}
+      <aside
+        className={`app-sidebar ${isOpen ? 'open' : 'closed'}`}
+        aria-label="Sidebar navigation"
+      >
+        {/* Sidebar Header: Branding & Collapse Toggle */}
+        <div className="sidebar-header">
+          <div className="sidebar-brand-group">
+            <div className="sidebar-sparkle-badge" aria-hidden="true">
               <Sparkles size={16} color="#FFFFFF" fill="#FFFFFF" />
             </div>
-            <span className="drawer-title">Firebird AI</span>
+            <span className="sidebar-brand-title">Firebird AI</span>
           </div>
-          <button className="drawer-close-btn" onClick={onClose} title="Close drawer" aria-label="Close drawer">
-            <X size={18} />
+          <button
+            type="button"
+            className="sidebar-toggle-btn"
+            onClick={onClose}
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+          >
+            <PanelLeftClose size={18} />
           </button>
         </div>
 
-        {/* Admin Status Banner if authenticated */}
-        {isAdmin && (
-          <div style={{
-            padding: '10px 16px',
-            background: 'rgba(249, 115, 22, 0.1)',
-            borderBottom: '1px solid rgba(249, 115, 22, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Shield size={16} color="#f97316" />
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f97316' }}>
-                Admin Mode Active
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                onLogout?.();
-                onClose();
-              }}
-              title="Sign Out of Admin"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: '0.76rem',
-                padding: '4px 6px',
-                borderRadius: 4
-              }}
-            >
-              <LogOut size={14} />
-              <span>Lock</span>
-            </button>
-          </div>
-        )}
-
-        {/* Action row: New Chat */}
-        <div className="drawer-action-row">
+        {/* Action Row: New Chat button */}
+        <div className="sidebar-action-row">
           <button
-            className="drawer-new-chat-btn"
-            style={{ width: '100%' }}
-            onClick={() => {
-              onNewChat();
-              onClose();
-            }}
+            type="button"
+            data-testid="sidebar-new-chat-btn"
+            className="sidebar-new-chat-btn"
+            onClick={handleNewChat}
           >
             <Plus size={16} strokeWidth={2.5} />
             <span>New Chat</span>
           </button>
         </div>
 
-        {/* Section Header: Recent Chats */}
-        <div className="drawer-section-title">
+        {/* Section Title: Recent Chats */}
+        <div className="sidebar-section-title">
           <MessageSquare size={14} color="#64748B" />
           <span>Recent Chats</span>
         </div>
 
-        {/* Session Conversation List */}
-        <div className="drawer-chats-list">
+        {/* Scrollable Conversation List */}
+        <div className="sidebar-chats-list" role="list">
           {displayQueries.map((c) => {
             const isActive = c.id === activeId;
             return (
               <div
                 key={c.id}
-                className={`drawer-chat-item ${isActive ? 'active' : ''}`}
-                onClick={() => {
-                  onSelectChat(c.id);
-                  onClose();
-                }}
+                role="listitem"
+                data-testid={`chat-item-${c.id}`}
+                className={`sidebar-chat-item ${isActive ? 'active' : ''}`}
+                onClick={() => handleSelect(c.id)}
               >
-                <div className="drawer-chat-info">
-                  <span className="drawer-chat-title">{c.title || 'Untitled Conversation'}</span>
+                <div className="sidebar-chat-info">
+                  <span className="sidebar-chat-title">{c.title || 'Untitled Conversation'}</span>
                 </div>
                 {!c.id.startsWith('default-') && (
                   <button
-                    className="drawer-chat-del-btn"
+                    type="button"
+                    className="sidebar-chat-del-btn"
                     title="Delete Chat"
+                    aria-label={`Delete chat ${c.title || ''}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeleteChat(c.id);
@@ -136,15 +125,40 @@ export default function Sidebar({
           })}
         </div>
 
-        {/* Drawer Footer */}
-        <div className="drawer-footer" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* Knowledge Base is strictly visible ONLY to authenticated Administrator */}
+        {/* Sidebar Footer: Admin status & Knowledge base */}
+        <div className="sidebar-footer">
+          {isAdmin && (
+            <div className="sidebar-admin-badge">
+              <div className="sidebar-admin-info">
+                <Shield size={15} color="#f97316" />
+                <span>Admin Mode</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onLogout?.();
+                  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+                    onClose?.();
+                  }
+                }}
+                title="Sign Out of Admin"
+                className="sidebar-admin-lock-btn"
+              >
+                <LogOut size={13} />
+                <span>Lock</span>
+              </button>
+            </div>
+          )}
+
           {isAdmin ? (
             <button
-              className="drawer-kb-btn"
+              type="button"
+              className="sidebar-kb-btn"
               onClick={() => {
                 onOpenKnowledge();
-                onClose();
+                if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+                  onClose?.();
+                }
               }}
             >
               <Database size={16} color="#f97316" />
@@ -152,24 +166,13 @@ export default function Sidebar({
             </button>
           ) : (
             <button
+              type="button"
+              className="sidebar-login-btn"
               onClick={() => {
                 onOpenLogin?.();
-                onClose();
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                width: '100%',
-                padding: '10px 14px',
-                background: 'transparent',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                transition: 'all 0.15s ease'
+                if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+                  onClose?.();
+                }
               }}
             >
               <Lock size={14} />

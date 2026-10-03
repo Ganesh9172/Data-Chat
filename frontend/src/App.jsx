@@ -93,8 +93,10 @@ export default function App() {
   const [stats, setStats] = useState({ documents: 6, chunks: 29, qa_pairs: 0 });
   const [toast, setToast] = useState(null);
 
-  // Drawer & Modals
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  // Sidebar & Modals
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth > 768 : true;
+  });
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
@@ -263,11 +265,12 @@ export default function App() {
   };
 
   return (
-    <div className="app-root">
-      {/* Slide-over Recent Chats Drawer */}
+    <div className={`app-root ${isSidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
+      {/* Left Sidebar */}
       <Sidebar
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onToggle={() => setIsSidebarOpen((prev) => !prev)}
         conversations={conversations}
         activeId={activeChatId}
         onSelectChat={handleSelectChat}
@@ -287,7 +290,8 @@ export default function App() {
         onSendMessage={handleSendMessage}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onNewChat={handleNewChat}
-        onToggleDrawer={() => setIsDrawerOpen((prev) => !prev)}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         isAdmin={isAdmin}
       />
 

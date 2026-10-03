@@ -20,7 +20,6 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
 
   const handleSpeechEnd = useCallback(() => {
     baseTextRef.current = '';
-    // Return focus to textarea for seamless manual editing
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
@@ -49,13 +48,23 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
     }
   }, [error, clearError]);
 
-  // Dynamic textarea height calculation
+  // Dynamic textarea height calculation: supports multi-line typing naturally
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const calculatedHeight = Math.min(Math.max(textarea.scrollHeight, 48), 180);
+      textarea.style.height = `${calculatedHeight}px`;
+      textarea.style.overflowY = textarea.scrollHeight > 180 ? 'auto' : 'hidden';
     }
   }, [text]);
+
+  // Auto-focus input on mount and whenever input becomes enabled
+  useEffect(() => {
+    if (!disabled && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [disabled]);
 
   const handleSubmit = (e) => {
     e?.preventDefault();
@@ -67,15 +76,19 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
     setText('');
     baseTextRef.current = '';
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = '48px';
+      textareaRef.current.focus();
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Ctrl+Enter or Cmd+Enter sends the message
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSubmit();
+      return;
     }
+    // Enter without Ctrl/Cmd naturally creates a new line in the textarea
   };
 
   const handleMicToggle = () => {
@@ -90,7 +103,7 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
 
   return (
     <div className="chat-input-container">
-      {/* Subtle Voice Status Banner (Listening / Error feedback) */}
+      {/* Voice Status Pill */}
       {error && (
         <div className="voice-status-pill error">
           <span>{error}</span>
@@ -107,16 +120,19 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
 
       {isListening && !error && (
         <div className="voice-status-pill listening">
-          <span className="voice-status-dot"></span>
+          <span className="voice-status-dot" aria-hidden="true"></span>
           <span>Listening... Speak now</span>
         </div>
       )}
 
-      <div className={`chat-input-pill ${isListening ? 'input-listening' : ''}`}>
+      {/* ChatGPT-style Message Composer */}
+      <div
+        className={`chat-composer-box chat-input-pill ${isListening ? 'input-listening' : ''}`}
+      >
         <textarea
           ref={textareaRef}
           data-testid="chat-input"
-          className="chat-input-field"
+          className="chat-composer-textarea chat-input-field"
           placeholder={isListening ? "Listening to your voice..." : "Ask questions about your problem..."}
           rows={1}
           value={text}
@@ -130,42 +146,51 @@ export default function ChatInput({ onSend, disabled, onOpenKnowledge, isAdmin }
           disabled={disabled}
         />
 
-        <div className="chat-input-actions">
-          {isAdmin && (
+        <div className="chat-composer-footer">
+          <div className="composer-hints">
+            <span className="composer-hint-badge">
+              <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send · <kbd>Enter</kbd> for new line
+            </span>
+          </div>
+
+          <div className="chat-input-actions composer-actions">
+            {isAdmin && (
+              <button
+                type="button"
+                className="input-action-btn attach-btn"
+                onClick={onOpenKnowledge}
+                title="Upload Document / Knowledge Base (Admin)"
+                aria-label="Upload Document"
+              >
+                <Paperclip size={18} />
+              </button>
+            )}
+
             <button
               type="button"
-              className="input-action-btn attach-btn"
-              onClick={onOpenKnowledge}
-              title="Upload Document / Knowledge Base (Admin)"
+              className={`input-action-btn mic-btn ${isListening ? 'listening' : ''}`}
+              onClick={handleMicToggle}
+              disabled={disabled}
+              title={isListening ? "Stop listening" : "Voice input (Speech to text)"}
+              aria-label={isListening ? "Stop voice input" : "Start voice input"}
             >
-              <Paperclip size={18} />
+              <Mic size={18} />
             </button>
-          )}
 
-          <button
-            type="button"
-            className={`input-action-btn mic-btn ${isListening ? 'listening' : ''}`}
-            onClick={handleMicToggle}
-            disabled={disabled}
-            title={isListening ? "Stop listening" : "Voice input (Speech to text)"}
-            aria-label={isListening ? "Stop voice input" : "Start voice input"}
-          >
-            <Mic size={18} />
-          </button>
-
-          <button
-            type="button"
-            data-testid="send-btn"
-            className="input-action-btn send-btn"
-            onClick={handleSubmit}
-            disabled={!text.trim() || disabled}
-            title="Send Message"
-          >
-            <ArrowUp size={18} strokeWidth={2.5} />
-          </button>
+            <button
+              type="button"
+              data-testid="send-btn"
+              className="input-action-btn send-btn"
+              onClick={handleSubmit}
+              disabled={!text.trim() || disabled}
+              title="Send Message (Ctrl + Enter)"
+              aria-label="Send message"
+            >
+              <ArrowUp size={18} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
